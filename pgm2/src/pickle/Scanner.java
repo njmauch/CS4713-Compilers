@@ -1,7 +1,8 @@
 package pickle;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
 
 public class Scanner {
 
@@ -137,20 +138,20 @@ public class Scanner {
         tempToken.iColPos = iBeginTokenPos;
         tempToken.iSourceLineNr = iSourceLineNr;
 
-        STEntry entryResult = symbolTable.getSymbol(tempToken.tokenStr);
+        SymbolTable.STEntry entryResult = symbolTable.getSymbol(tempToken.tokenStr);
 
-        if (entryResult != NULL) {
+        if (entryResult != null) {
             tempToken.primClassif = entryResult.primClassif;
 
-            if (entryResult instanceof STControl) {
-                tempToken.subClassif = ((STControl) entryResult).subClassif;
+            if (entryResult instanceof SymbolTable.STControl) {
+                tempToken.subClassif = ((SymbolTable.STControl) entryResult).subClassif;
                 tempToken.tokenStr = new String(textCharM, iBeginTokenPos + 1, (iEndTokenPos - 1) - iBeginTokenPos);
                 return tempToken;
-            } else if (entryResult instanceof STFunction) {
-                tempToken.subClassif = ((STFunction) entryResult).subClassif;
+            } else if (entryResult instanceof SymbolTable.STFunction) {
+                tempToken.subClassif = ((SymbolTable.STFunction) entryResult).subClassif;
                 tempToken.tokenStr = new String(textCharM, iBeginTokenPos + 1, (iEndTokenPos - 1) - iBeginTokenPos);
                 return tempToken;
-            } else if (entryResult instanceof STIdentifier) {
+            } else if (entryResult instanceof SymbolTable.STIdentifier) {
                 tempToken.subClassif = SubClassif.IDENTIFIER;
                 tempToken.tokenStr = new String(textCharM, iBeginTokenPos + 1, (iEndTokenPos - 1) - iBeginTokenPos);
                 return tempToken;
@@ -224,7 +225,7 @@ public class Scanner {
                 if (c == '.') {
                     //If bIsFloat is true, that means second decimal has been found so raise exception
                     if (bIsFloat == 1) {
-                        System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, tokenStr, sourceFileNm));
+                        System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm));
                         throw new Exception();
                     }
                     //First decimal found so set float flag to true
@@ -235,7 +236,7 @@ public class Scanner {
                 }
                 //If encountering a non numeric character in the number raise exception
                 else if (!(Character.isDigit(c))) {
-                    System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, tokenStr, sourceFileNm));
+                    System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm));
                     throw new Exception();
                 }
                 tempStr.append(c);
