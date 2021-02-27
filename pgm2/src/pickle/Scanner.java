@@ -91,7 +91,6 @@ public class Scanner {
                     iColPos = 0;
                     return tempToken;
                 }
-
             } else {
                 if ((whiteSpace.indexOf(textCharM[iColPos]) > -1) && iColPos < textCharM.length) {
                     iColPos++;
@@ -109,7 +108,7 @@ public class Scanner {
         while (delimiters.indexOf(textCharM[iColPos]) == -1) {
             iColPos++;
             //If the end of the array break out of loop
-            if (iColPos == sourceLineM.get(iSourceLineNr).length()) {
+            if (iColPos == textCharM.length) {
                 break;
             }
         }
@@ -220,7 +219,7 @@ public class Scanner {
         StringBuilder tempStr = new StringBuilder();
 
         operandToken.primClassif = Classif.OPERAND;
-        if (textCharM[iColPos] >= '0' && textCharM[iColPos] <= '9') {
+        if (textCharM[operandToken.iColPos] >= '0' && textCharM[operandToken.iColPos] <= '9') {
             for (char c : textCharM) {
                 if (delimiters.indexOf(textCharM[iColPos]) > -1) {
                     break;
