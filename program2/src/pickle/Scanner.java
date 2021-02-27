@@ -283,6 +283,7 @@ public class Scanner {
             }
         } else if ((operandToken.tokenStr.equals("T")) || (operandToken.tokenStr.equals("F"))) {
             operandToken.subClassif = SubClassif.BOOLEAN;
+            return;
         } else {
             operandToken.subClassif = SubClassif.IDENTIFIER;
             return;
