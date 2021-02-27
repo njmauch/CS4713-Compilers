@@ -44,6 +44,7 @@ public class SymbolTable {
 
     public SymbolTable(){
         ST = new HashMap<String, STEntry>();
+        initGlobal();
     }
 
     public void putSymbol(String s, STEntry e){
