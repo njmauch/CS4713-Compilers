@@ -1,0 +1,132 @@
+primClassif subClassif   tokenStr
+   1 Int i;
+CONTROL     DECLARE      Int
+OPERAND     IDENTIFIER   i
+   2 Float pi;
+SEPARATOR   -            ;
+CONTROL     DECLARE      Float
+OPERAND     IDENTIFIER   pi
+   3 String day;
+SEPARATOR   -            ;
+CONTROL     DECLARE      String
+OPERAND     IDENTIFIER   day
+   4    day
+SEPARATOR   -            ;
+   5    =
+OPERAND     IDENTIFIER   day
+   7 String name;
+OPERAND     STRING       Sunday
+
+CONTROL     DECLARE      String
+OPERAND     IDENTIFIER   name
+   8 name = "Anita Goodgrade";
+SEPARATOR   -            ;
+OPERAND     IDENTIFIER   name
+OPERATOR    -            =
+   9 String weird;
+OPERAND     STRING       Anita Goodgrade
+
+CONTROL     DECLARE      String
+OPERAND     IDENTIFIER   weird
+   10 weird = "\tTX\tTexas\n";
+SEPARATOR   -            ;
+OPERAND     IDENTIFIER   weird
+OPERATOR    -            =
+   11 String loc;
+OPERAND     STRING       . TX. Texas.
+                         09  09     0A
+CONTROL     DECLARE      String
+OPERAND     IDENTIFIER   loc
+   12 loc = "TX";
+SEPARATOR   -            ;
+OPERAND     IDENTIFIER   loc
+OPERATOR    -            =
+   13
+   14 // numeric stuff
+   15 print(">>> Checking datatype results based on left operand");
+OPERAND     STRING       TX
+
+SEPARATOR   -            (
+   16 pi = 3.14;
+OPERAND     STRING       >>> Checking datatype results based on left operand
+
+OPERAND     IDENTIFIER   pi
+OPERATOR    -            =
+OPERAND     FLOAT        3.14
+   17 Float area;
+SEPARATOR   -            ;
+CONTROL     DECLARE      Float
+OPERAND     IDENTIFIER   area
+   18 Float radius2;
+SEPARATOR   -            ;
+CONTROL     DECLARE      Float
+OPERAND     IDENTIFIER   radius2
+   19 Int radius;
+SEPARATOR   -            ;
+CONTROL     DECLARE      Int
+OPERAND     IDENTIFIER   radius
+   20 radius = 8;
+SEPARATOR   -            ;
+OPERAND     IDENTIFIER   radius
+OPERATOR    -            =
+OPERAND     INTEGER      8
+   21 radius2 = radius ^ 2;  // square the radius
+SEPARATOR   -            ;
+OPERAND     IDENTIFIER   radius2
+OPERATOR    -            =
+OPERAND     IDENTIFIER   radius
+OPERATOR    -            ^
+OPERAND     INTEGER      2
+   22 print("\t1. area all float");
+SEPARATOR   -            ;
+SEPARATOR   -            (
+   23 area = pi * radius2;
+OPERAND     STRING       . 1. area all float
+                         09
+OPERAND     IDENTIFIER   area
+OPERATOR    -            =
+OPERAND     IDENTIFIER   pi
+OPERATOR    -            *
+OPERAND     IDENTIFIER   radius2
+   24 print("\tradius="
+SEPARATOR   -            ;
+FUNCTION    BUILTIN      print
+SEPARATOR   -            (
+   25       ,  radius
+OPERAND     STRING       . radius=
+                         09
+SEPARATOR   -            ,
+   26       ,  "radius2="
+OPERAND     IDENTIFIER   radius
+   27       ,  radius2
+OPERAND     STRING       radius2=
+
+SEPARATOR   -            ,
+   28       ,  "area="
+OPERAND     IDENTIFIER   radius2
+   29       ,  area);
+OPERAND     STRING       area=
+
+SEPARATOR   -            ,
+OPERAND     IDENTIFIER   area
+SEPARATOR   -            )
+   30 Int irad2;
+SEPARATOR   -            ;
+CONTROL     DECLARE      Int
+OPERAND     IDENTIFIER   irad2
+   31 irad2 = radius ^ 2;
+SEPARATOR   -            ;
+OPERAND     IDENTIFIER   irad2
+OPERATOR    -            =
+OPERAND     IDENTIFIER   radius
+OPERATOR    -            ^
+OPERAND     INTEGER      2
+   32 print("\x2. area using int radius as left operand");
+SEPARATOR   -            ;
+FUNCTION    BUILTIN      print
+Invalid escape attempt, line: 31 and column: 7
+java.lang.Exception
+	at pickle.Scanner.createStringToken(Scanner.java:232)
+	at pickle.Scanner.getNextToken(Scanner.java:129)
+	at pickle.Scanner.getNext(Scanner.java:53)
+	at pickle.Pickle.main(Pickle.java:36)

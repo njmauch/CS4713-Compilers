@@ -17,7 +17,6 @@ public class Scanner {
 
     private final static String whiteSpace = " \t\n";
     private final static String delimiters = " \t;:()\'\"=!<>+-*/[]#,^\n";
-    private final static String strOperators = "<>=!^";
     private final static String operators = "+-*/<>!=#^";
     private final static String separators = "():;[],";
 
@@ -36,7 +35,7 @@ public class Scanner {
 
         //Set Column and Line number to 0
         iSourceLineNr = 0;
-        iColPos = 0;
+
 
         //Get the first line from the array and set it as character array
         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
@@ -50,7 +49,6 @@ public class Scanner {
     }
 
     public String getNext() throws Exception {
-
         currentToken = nextToken;
         this.nextToken = getNextToken();
 
@@ -68,7 +66,14 @@ public class Scanner {
             if (sourceLineM.get(iSourceLineNr).isEmpty()) {
                 while (sourceLineM.get(iSourceLineNr).isEmpty()) {
                     System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
+                    if (iSourceLineNr + 1 >= sourceLineM.size()) {
+                        tempToken.tokenStr = "";
+                        tempToken.primClassif = Classif.EOF;
+                        tempToken.iSourceLineNr = iSourceLineNr;
+                        return tempToken;
+                    }
                     iSourceLineNr++;
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
                 }
             }
             //Prints out line with tokens
@@ -91,12 +96,23 @@ public class Scanner {
                     iColPos = 0;
                     return tempToken;
                 }
-
+                else if (operators.indexOf(textCharM[iColPos]) > -1) {
+                    tempToken.primClassif = Classif.OPERATOR;
+                    tempToken.tokenStr = new String(textCharM, iColPos, 1);
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    iColPos = 0;
+                    return tempToken;
+                }
+                else {
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    iColPos = 0;
+                    getNextToken();
+                }
             } else {
                 if ((whiteSpace.indexOf(textCharM[iColPos]) > -1) && iColPos < textCharM.length) {
                     iColPos++;
                 } else if (((iColPos + 1) < textCharM.length) && (textCharM[iColPos] == '/') && (textCharM[iColPos + 1] == '/')) {
-                    iColPos = textCharM.length;
+                    iColPos = textCharM.length - 1;
                 } else {
                     break;
                 }
@@ -106,10 +122,10 @@ public class Scanner {
         //Set beginning of token index to the current column position
         iBeginTokenPos = iColPos;
 
-        while (delimiters.indexOf(textCharM[iColPos]) == -1) {
+        while (delimiters.indexOf(textCharM[iColPos]) == -1){
             iColPos++;
             //If the end of the array break out of loop
-            if (iColPos == sourceLineM.get(iSourceLineNr).length()) {
+            if (iColPos == textCharM.length) {
                 break;
             }
         }
@@ -117,26 +133,42 @@ public class Scanner {
         //Checking if token is string
         if (textCharM[iBeginTokenPos] == '\'' || textCharM[iBeginTokenPos] == '\"') {
             createStringToken(tempToken);
+            iSourceLineNr++;
+            iColPos = 0;
+            textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
             return tempToken;
         }
 
         if (iBeginTokenPos == iColPos) {
-            if (strOperators.indexOf(textCharM[iColPos]) > -1) {
+            if (operators.indexOf(textCharM[iColPos]) > -1) {
                 if (textCharM[iColPos + 1] == '=') {
+                    iColPos += 2;
                     tempToken.primClassif = Classif.OPERATOR;
                     tempToken.tokenStr = new String(textCharM, iBeginTokenPos, 2);
                     return tempToken;
                 } else if (operators.indexOf(textCharM[iColPos]) > -1) {
+                    iColPos++;
                     tempToken.primClassif = Classif.OPERATOR;
                     tempToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
                     return tempToken;
                 }
+            } else if (separators.indexOf(textCharM[iColPos]) > -1) {
+                tempToken.primClassif = Classif.SEPARATOR;
+                tempToken.tokenStr = new String(textCharM, iColPos, 1);
+                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                iColPos++;
+                return tempToken;
             }
         }
 
 
         iEndTokenPos = iColPos;
-        tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+        if(!(iColPos < textCharM.length)) {
+            tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+            iColPos--;
+        } else {
+            tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+        }
         tempToken.iColPos = iBeginTokenPos;
         tempToken.iSourceLineNr = iSourceLineNr;
 
@@ -202,7 +234,7 @@ public class Scanner {
                         iColPos += 2;
                     }
                     default -> {
-                        System.err.printf("Invalid escape attempt, line: %d and column: %d\n", iSourceLineNr, iColPos);
+                        System.err.printf("Invalid escape attempt, line: %d and column: %d\n", iSourceLineNr + 1, iColPos);
                         throw new Exception();
                     }
                 }
@@ -217,32 +249,32 @@ public class Scanner {
 
     private void createOperandToken(Token operandToken) throws Exception {
         int bIsFloat = 0;
+        char[] tokensCharsM = operandToken.tokenStr.toCharArray();
         StringBuilder tempStr = new StringBuilder();
 
         operandToken.primClassif = Classif.OPERAND;
-        if (textCharM[iColPos] >= '0' && textCharM[iColPos] <= '9') {
-            for (char c : textCharM) {
-                if (delimiters.indexOf(textCharM[iColPos]) > -1) {
+        if (textCharM[operandToken.iColPos] >= '0' && textCharM[operandToken.iColPos] <= '9') {
+            for (int i = 0; i < tokensCharsM.length; i += 1) {
+                if ((delimiters.indexOf(tokensCharsM[i]) > -1) && (bIsFloat == 1)) {
                     break;
                 }
-                if (c == '.') {
+                if (tokensCharsM[i] == '.') {
                     //If bIsFloat is true, that means second decimal has been found so raise exception
                     if (bIsFloat == 1) {
-                        System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm));
+                        System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, operandToken.tokenStr, sourceFileNm));
                         throw new Exception();
                     }
                     //First decimal found so set float flag to true
                     else {
-                        tempStr.append('.');
                         bIsFloat = 1;
                     }
                 }
                 //If encountering a non numeric character in the number raise exception
-                else if (!(Character.isDigit(c))) {
-                    System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm));
+                else if (!(Character.isDigit(tokensCharsM[i]))) {
+                    System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, operandToken.tokenStr, sourceFileNm));
                     throw new Exception();
                 }
-                tempStr.append(c);
+                tempStr.append(tokensCharsM[i]);
             }
             if (bIsFloat == 1) {
                 operandToken.subClassif = SubClassif.FLOAT;
@@ -251,6 +283,7 @@ public class Scanner {
             }
         } else if ((operandToken.tokenStr.equals("T")) || (operandToken.tokenStr.equals("F"))) {
             operandToken.subClassif = SubClassif.BOOLEAN;
+            return;
         } else {
             operandToken.subClassif = SubClassif.IDENTIFIER;
             return;
@@ -258,4 +291,3 @@ public class Scanner {
         operandToken.tokenStr = tempStr.toString();
     }
 }
-
