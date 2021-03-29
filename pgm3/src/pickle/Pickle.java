@@ -26,17 +26,14 @@ public class Pickle
 
         try
         {
-            // Print a column heading 
+            /* Print a column heading
             System.out.printf("%-11s %-12s %s\n"
                     , "primClassif"
                     , "subClassif"
                     , "tokenStr");
-
-            Scanner scan = new Scanner(args[0], symbolTable);
-            while (! scan.getNext().isEmpty())
-            {
-                scan.currentToken.printToken();
-            }
+            */
+            Parser parser = new Parser(new Scanner(args[0], symbolTable), symbolTable);
+            parser.parseExc();
         }
         catch (Exception e)
         {

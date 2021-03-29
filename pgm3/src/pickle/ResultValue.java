@@ -1,8 +1,5 @@
 package pickle;
 
-import javax.xml.transform.Result;
-import java.util.ArrayList;
-
 public class ResultValue {
     public SubClassif type;
     public String value;
@@ -28,6 +25,13 @@ public class ResultValue {
         this.value = value;
         this.structure = 1;
         this.terminatingStr = ";";
+    }
+
+    public ResultValue() {
+        this.type = SubClassif.EMPTY;
+        this.value = "";
+        this.structure = 1;
+        this.terminatingStr = "";
     }
 
 }

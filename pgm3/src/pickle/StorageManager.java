@@ -3,19 +3,19 @@ package pickle;
 import java.util.HashMap;
 
 public class StorageManager {
-    HashMap<String, ResultValue> sManager;
+    HashMap<String, ResultValue> storageManager;
     public StorageManager() {
-        sManager = new HashMap<String, ResultValue>();
+        storageManager = new HashMap<>();
     }
 
     public ResultValue getValue(String key) {
-        if(!sManager.containsKey(key))
+        if(!storageManager.containsKey(key))
             return null;
 
-        return sManager.get(key);
+        return storageManager.get(key);
     }
 
     public void insertValue(String key, ResultValue value) {
-        sManager.put(key, value);
+        storageManager.put(key, value);
     }
 }
