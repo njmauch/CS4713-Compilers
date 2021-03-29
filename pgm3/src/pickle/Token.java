@@ -71,6 +71,27 @@ public class Token
 
     }
 
+    public ResultValue toResult(Parser parser) {
+        ResultValue res = new ResultValue();
+        res.type = this.subClassif;
+        res.value = this.tokenStr;
+        res.structure = "PRIMITIVE";
+        return res;
+    }
+    public static Token copyToken(Token fromToken) {
+        Token toToken = new Token();
+
+        toToken.tokenStr = fromToken.tokenStr;
+        toToken.primClassif = fromToken.primClassif;
+        toToken.subClassif = fromToken.subClassif;
+        toToken.iColPos	= fromToken.iColPos;
+        toToken.iSourceLineNr = fromToken.iSourceLineNr;
+        /*toToken.precedence	= fromToken.precedence;
+        toToken.stackPrecedence = fromToken.stackPrecedence;*/
+
+        return toToken;
+    }
+
     public void hexPrint(int indentLength, String tokenStr) {
         char [] strM = tokenStr.toCharArray();
         int tempLength = tokenStr.length();

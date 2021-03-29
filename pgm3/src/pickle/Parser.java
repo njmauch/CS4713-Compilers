@@ -1,19 +1,13 @@
 package pickle;
 
-import javax.xml.transform.Result;
 import java.io.IOException;
 
 public class Parser{
     public Scanner scan;
     public SymbolTable symbolTable;
     public String sourceFileNm;
-    public StorageManager smStorage;
-
-    public class ParseResult{
-        SubClassif resultType;
-        Token token;
-        ParseResult sibling;
-    }
+    public StorageManager storageManager;
+    public Token currentParseToken;
 
 
     Parser(Scanner scan, SymbolTable symbolTable)
@@ -21,10 +15,34 @@ public class Parser{
         this.scan = scan;
         this.symbolTable = symbolTable;
         this.sourceFileNm = scan.sourceFileNm;
-        this.smStorage = new StorageManager();
+        this.storageManager = new StorageManager();
     }
 
-    private ResultValue statements (boolean bExec) throws Exception, IOException {
+    public void beginParse () throws Exception {
+        scan.getNext();
+        while(scan.currentToken.primClassif != Classif.EOF) {
+            statements(true);
+        }
+    }
+    public void nextParseToken() throws Exception {
+        if(scan.getNext().isEmpty()) {
+            currentParseToken = null;
+            return;
+        }
+        currentParseToken = scan.currentToken;
+    }
+    private void functionStmt () throws Exception {
+        if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
+            if(scan.currentToken.tokenStr.equals("print")) {
+                printParse();
+            }
+            else {
+                error("No function found with name %s", scan.currentToken.tokenStr);
+            }
+        }
+    }
+
+    private ResultValue statements (boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
 
         while (! scan.getNext().isEmpty()){
@@ -35,9 +53,6 @@ public class Parser{
 
             //Assign Value;
             if (scan.currentToken.primClassif == Classif.OPERAND){
-                //if (debugStmt()) {
-                 //   break;
-                //}
                 assigmentStmt();
             }
             else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.END)){
@@ -64,45 +79,7 @@ public class Parser{
         return res;
     }
 
-    private void functionStmt () throws Exception {
-        ResultValue res = new ResultValue();
-        if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
-            if(scan.currentToken.tokenStr.equals("print")) {
-                print();
-            }
-            else {
-                error("No function found with name %s", scan.currentToken.tokenStr);
-            }
-        }
-    }
-
-    private void print() throws Exception {
-        scan.getNext();
-        StringBuilder printStr = new StringBuilder();
-        int parenCount = 0;
-        if(! scan.currentToken.tokenStr.equals("(")) {
-            error("Missing open paren");
-        }
-        parenCount++;
-        scan.getNext();
-        while(parenCount > 0) {
-
-            if(scan.currentToken.tokenStr.equals(";")) {
-                error("No closing paren found");
-            }
-            if(scan.currentToken.tokenStr.equals(")")) {
-                parenCount--;
-            }
-            else if (scan.currentToken.tokenStr.equals("(")) {
-                parenCount++;
-            }
-            printStr.append(scan.currentToken.tokenStr);
-            scan.getNext();
-        }
-        System.out.println(printStr.toString());
-    }
-
-    public ResultValue controlStmt() throws Exception {
+    public void controlStmt() throws Exception {
         ResultValue res = new ResultValue();
         while (true) {
             scan.getNext();
@@ -150,7 +127,7 @@ public class Parser{
             }
         } else {
             skipTo(":");
-            res = statements(false);
+            statements(false);
         }
         if (!scan.currentToken.tokenStr.equals("endwhile")) {
             error("Expected endwhile");
@@ -159,38 +136,7 @@ public class Parser{
             error("Expected ';' after endwhile ");
         }
     }
-
-    private void declareStmt() throws Exception {
-        ResultValue res = new ResultValue();
-        String declareStr = scan.currentToken.tokenStr;
-        Token declareToken = scan.currentToken;
-
-
-        if(declareStr == "Int") {
-            declareToken.subClassif = SubClassif.INTEGER;
-        }
-        else if(declareStr == "Float") {
-            declareToken.subClassif = SubClassif.FLOAT;
-        }
-        else if(declareStr == "String") {
-            declareToken.subClassif = SubClassif.STRING;
-        }
-        else if(declareStr == "Bool") {
-            declareToken.subClassif = SubClassif.BOOLEAN;
-        }
-        else {
-            declareToken.subClassif = SubClassif.EMPTY;
-        }
-        scan.getNext();
-        if(scan.currentToken.tokenStr.equals("=")) {
-            if ((scan.currentToken.primClassif != Classif.OPERAND) || (scan.currentToken.subClassif == SubClassif.IDENTIFIER)) {
-                error("Expected variable");
-            }
-            res = expr();
-        }
-    }
-
-    ResultValue assigmentStmt() throws Exception {
+    public void assigmentStmt() throws Exception {
         ResultValue res = new ResultValue();
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
             error("Expected a variable for the target assignment", scan.currentToken.tokenStr);
@@ -213,16 +159,16 @@ public class Parser{
             case "-=":
                 resO2 = expr();
                 nOp2 = new Numeric(this, resO2, "-=", "2nd Operand");
-                resO1 = this.smStorage.getValue(variableStr);
+                resO1 = this.storageManager.getValue(variableStr);
                 nOp1 = new Numeric(this, resO1, "-=", "1st Operand");
-                res = assign(variableStr, Utility.subtraction(this, nOp1, nOp2);
+                res = assign(variableStr, Utility.subtraction(this, nOp1, nOp2));
                 break;
             case "+=":
                 resO2 = expr();
                 nOp2 = new Numeric(this, resO2, "+=", "2nd Operand");
-                resO1 = this.smStorage.getValue(variableStr);
+                resO1 = this.storageManager.getValue(variableStr);
                 nOp1 = new Numeric(this, resO1, "+=", "1st Operand");
-                res = assign(variableStr, Utility.addition(this, nOp1, nOp2);
+                res = assign(variableStr, Utility.addition(this, nOp1, nOp2));
             default:
                 error("expected assignment operator");
         }
@@ -247,7 +193,7 @@ public class Parser{
     private ResultValue products() throws Exception
     {
         ResultValue res = operand();                    // Rule 3
-        ResultValue temp = new ResultValue();
+        ResultValue temp;
         while (scan.currentToken.tokenStr.equals("*") ) // * from rule 4.1
         {
             scan.getNext();
@@ -264,37 +210,35 @@ public class Parser{
         scan.getNext();
 
         ResultValue res01 = null;
-        ResultValue res02 = null;
+        ResultValue res02;
         ResultValue res = new ResultValue();
         String opStr;
-        Token opToken;
 
         if(scan.currentToken.primClassif != Classif.OPERATOR) {
             res01 = expr();
         }
 
         opStr = scan.currentToken.tokenStr;
-        opToken = scan.currentToken;
 
         scan.getNext();
         res02 = expr();
 
-        if(opStr == ">") {
+        if(opStr.equals(">")) {
             res = Utility.greaterThan(scan, res01, res02);
         }
-        else if (opStr == "<") {
+        else if (opStr.equals("<")) {
             res = Utility.lessThan(scan, res01, res02);
         }
-        else if (opStr == ">=" ) {
+        else if (opStr.equals(">=")) {
             res = Utility.greaterThanOrEqual(scan, res01, res02);
         }
-        else if (opStr == "<=" ) {
+        else if (opStr.equals("<=")) {
             res = Utility.lessThanOrEqual(scan, res01, res02);
         }
-        else if (opStr == "==" ) {
+        else if (opStr.equals("==")) {
             res = Utility.equal(scan, res01, res02);
         }
-        else if (opStr == "!=" ) {
+        else if (opStr.equals("!=")) {
             res = Utility.notEqual(scan, res01, res02);
         }
         else {
@@ -307,49 +251,49 @@ public class Parser{
         int saveLineNr = scan.currentToken.iSourceLineNr;
         if (bExec) {
             ResultValue resCond = evalCond();
-            if (resCond.value == "T") {
-                ResultValue resTemp = executeStatements("T");
-                if (resTemp.terminatingStr == "else") {
-                    if (scan.getNext() != ":") {
+            if (resCond.value.equals("T")) {
+                ResultValue resTemp = statements(true);
+                if (resTemp.terminatingStr.equals("else")) {
+                    if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
-                    resTemp = executeStatments("F");
+                    resTemp = statements(false);
                 }
-                if (resTemp.terminatingStr != "endif") {
+                if (!resTemp.terminatingStr.equals("endif")) {
                     error("expected a ‘endif’ for an ‘if’");
                 }
-                if (scan.getNext() != ";") {
+                if (!scan.getNext().equals(";")) {
                     error("expected a ‘;’after ‘endif’");
                 }
             } else {
-                ResultValue resTemp = executeStatements("F");
-                if (resTemp.terminatingStr == "else") {
-                    if (scan.getNext() != ":") {
+                ResultValue resTemp = statements(false);
+                if (resTemp.terminatingStr.equals("else")) {
+                    if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
-                    resTemp = executeStatments("T");
+                    resTemp = statements(true);
                 }
-                if (resTemp.terminatingStr != "endif") {
+                if (!resTemp.terminatingStr.equals("endif")) {
                     error("expected a ‘endif’ for an ‘if’");
                 }
-                if (scan.getNext() != ";") {
+                if (!scan.getNext().equals(";")) {
                     error("expected a ‘;’after ‘endif’");
                 }
             }
         }
         else {
             skipTo(":");
-            ResultValue resTemp = executeStatements("F");
-            if (resTemp.terminatingStr == "else") {
-                if (scan.getNext() != ":") {
+            ResultValue resTemp = statements(false);
+            if (resTemp.terminatingStr.equals("else")) {
+                if (!scan.getNext().equals(":")) {
                     error("expected a ‘:’after ‘else’");
                 }
-                resTemp = executeStatments("F");
+                resTemp = statements(false);
             }
-            if(resTemp.terminatingStr != "endif") {
+            if(!resTemp.terminatingStr.equals("endif")) {
                 error("expected a ‘endif’ for an ‘if’");
             }
-            if (scan.getNext() != ";") {
+            if (!scan.getNext().equals(";")) {
                 error("expected a ‘;’after ‘endif’");
             }
         }
@@ -366,16 +310,15 @@ public class Parser{
         {
             switch (scan.currentToken.subClassif)
             {
-                case SubClassif.IDENTIFIER:
-                    res = smStorage.getValue(scan.currentToken.tokenStr);
+                case IDENTIFIER:
+                    res = storageManager.getValue(scan.currentToken.tokenStr);
                     scan.getNext();
                     return res;
-                case SubClassif.INTEGER:
-                case SubClassif.FLOAT:
-                case SubClassif.DATE:
-                case SubClassif.STRING:
-                case SubClassif.BOOLEAN:
-                    res =scan.currentToken.toResult();  // Rule 5.1
+                case INTEGER:
+                case FLOAT:
+                case STRING:
+                case BOOLEAN:
+                    res = scan.currentToken.toResult(this);  // Rule 5.1
                     scan.getNext();                     // nextToken is operator or sep
                     return res;
             }
@@ -407,14 +350,127 @@ public class Parser{
             default:
                 error("Assign type is incompatible");
         }
-        smStorage.insertValue(variableStr, res);
+        storageManager.insertValue(variableStr, res);
 
         return res;
     }
+
+    public void declareStmt() throws Exception {
+        System.out.println("ENTER declareParse()");
+        String dclType = currentParseToken.tokenStr;
+
+        // Scan variable name
+        nextParseToken();
+        String variableName = currentParseToken.tokenStr;
+        SymbolTable.STControl dclTypeEntry = (SymbolTable.STControl) symbolTable.getSymbol(dclType);
+        if (dclTypeEntry.primClassif != Classif.CONTROL || dclTypeEntry.subClassif != SubClassif.DECLARE) {
+            error("Declaration error.  Incorrect symbol \"%s\" from token string \"%s\"", dclTypeEntry.symbol, dclType);
+        }
+
+        // Scan operator or semicolon
+        nextParseToken();
+        if(currentParseToken.tokenStr.equals("=")){
+            nextParseToken();
+            if((currentParseToken.primClassif != Classif.OPERAND) || (scan.currentToken.subClassif == SubClassif.IDENTIFIER)){
+                //TODO: do error return here.
+                System.out.println("Error");
+            }
+            nextParseToken();
+        }
+
+        Classif variablePrimClassif = Classif.EMPTY;
+        SubClassif variableSubClassif = SubClassif.EMPTY;
+        SubClassif variableType = SubClassif.EMPTY;
+        String structure = "";
+
+        if(dclType.equals("Int")) {
+            variablePrimClassif = Classif.OPERAND;
+            variableSubClassif = SubClassif.IDENTIFIER;
+            variableType = SubClassif.INTEGER;
+            structure = "primitive";
+        }
+        if(dclType.equals("Float")) {
+            variablePrimClassif = Classif.OPERAND;
+            variableSubClassif = SubClassif.IDENTIFIER;
+            variableType = SubClassif.FLOAT;
+            structure = "primitive";
+        }
+        if(dclType.equals("String")) {
+            variablePrimClassif = Classif.OPERAND;
+            variableSubClassif = SubClassif.IDENTIFIER;
+            variableType = SubClassif.STRING;
+            structure = "unbound array";
+        }
+        if(dclType.equals("Bool")) {
+            variablePrimClassif = Classif.OPERAND;
+            variableSubClassif = SubClassif.IDENTIFIER;
+            variableType = SubClassif.BOOLEAN;
+            structure = "primitive";
+        }
+
+        SymbolTable.STIdentifier declareEntry = symbolTable.new STIdentifier(variableName, variablePrimClassif, variableSubClassif, variableType, structure);
+
+        symbolTable.putSymbol(variableName, declareEntry);
+        // Check variable is declared
+        if(!symbolTable.ht.containsKey(variableName)) {
+            error("Declaration error.  \"%s\" not found in Symbol Table", variableName);
+        }
+        // Check semicolon
+        if(!scan.currentToken.tokenStr.equals(";")){
+            error("syntax error. Expected \";\" at \"%s\"", scan.currentToken.tokenStr);
+        }
+
+        SymbolTable.STIdentifier verifyEntry = (SymbolTable.STIdentifier) symbolTable.ht.get(variableName);
+        System.out.println("SYMBOL TABLE ENTRY");
+        System.out.println(verifyEntry.symbol);
+        System.out.println(verifyEntry.primClassif);
+        System.out.println(verifyEntry.subClassif);
+        System.out.println(verifyEntry.dclType);
+        System.out.println(verifyEntry.structure);
+        System.out.println();
+
+        ResultValue res = new ResultValue(declareEntry.dclType, "undefined", declareEntry.structure, "undefined");
+
+        storageManager.insertValue(declareEntry.symbol, res);
+        ResultValue testRes = storageManager.getValue(declareEntry.symbol);
+
+        System.out.println("STORAGE MANAGER ENTRY");
+        System.out.println(testRes.type);
+        System.out.println(testRes.value);
+        System.out.println(testRes.structure);
+        System.out.println(testRes.terminatingStr);
+
+    }
+
     public void error(String fmt, Object... varArgs) throws Exception
     {
         String diagnosticTxt = String.format(fmt, varArgs);
-        throw new ParserException(this.scan.iSourceLineNr, diagnosticTxt, this.sourceFileNm);
+        throw new ParserException(Scanner.iSourceLineNr, diagnosticTxt, this.sourceFileNm);
     }
 
+    private void printParse() throws Exception {
+        scan.getNext();
+        StringBuilder printStr = new StringBuilder();
+        int parenCount = 0;
+        if(! scan.currentToken.tokenStr.equals("(")) {
+            error("Missing open paren");
+        }
+        parenCount++;
+        scan.getNext();
+        while(parenCount > 0) {
+
+            if(scan.nextToken.tokenStr.equals(";")) {
+                error("No closing paren found");
+            }
+            if(scan.nextToken.tokenStr.equals(")")) {
+                parenCount--;
+            }
+            else if (scan.nextToken.tokenStr.equals("(")) {
+                parenCount++;
+            }
+            printStr.append(scan.nextToken.tokenStr);
+            scan.getNext();
+        }
+        System.out.println(printStr.toString());
+    }
 }

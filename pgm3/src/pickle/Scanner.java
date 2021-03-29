@@ -11,7 +11,7 @@ public class Scanner {
     public SymbolTable symbolTable;
     public static char[] textCharM;
     public static int iSourceLineNr;
-    public int iColPos;
+    public static int iColPos;
     public Token currentToken;
     public Token nextToken;
 
@@ -41,23 +41,19 @@ public class Scanner {
         //Get the first line from the array and set it as character array
         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
 
-        //Prepare tokens
-        currentToken = new Token();
-        nextToken = new Token();
-
         //Gets next token
-        nextToken.tokenStr = getNext();
+        this.nextToken = getNextToken();
     }
 
     public String getNext() throws Exception {
 
-        currentToken = nextToken;
+        this.currentToken = Token.copyToken(this.nextToken);
         this.nextToken = getNextToken();
 
-        return currentToken.tokenStr;
+        return this.currentToken.tokenStr;
     }
 
-    private Token getNextToken() throws Exception {
+    public Token getNextToken() throws Exception {
         int iBeginTokenPos;
         int iEndTokenPos;
         Token tempToken = new Token();

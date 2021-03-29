@@ -33,7 +33,7 @@ public class Pickle
                     , "tokenStr");
             */
             Parser parser = new Parser(new Scanner(args[0], symbolTable), symbolTable);
-            parser.parseExc();
+            parser.beginParse();
         }
         catch (Exception e)
         {

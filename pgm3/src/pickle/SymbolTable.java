@@ -2,15 +2,36 @@ package pickle;
 import java.util.HashMap;
 
 public class SymbolTable {
-    public HashMap<String, STEntry> ST;
+    HashMap<String, STEntry> ht;
+
+    public SymbolTable(){
+        ht = new HashMap<String, STEntry>();
+        initGlobal();
+    }
 
     //Code for STEntry
-    class STEntry {
-        String sTSymbol;
+    public class STEntry {
+        String symbol;
         Classif primClassif;
-        public STEntry(String s, Classif pci){
-            sTSymbol = s;
-            primClassif = pci;
+        public STEntry(String symbol, Classif primClassif){
+            this.symbol = symbol;
+            this.primClassif = primClassif;
+        }
+    }
+
+    public class STIdentifier extends STEntry{
+        SubClassif subClassif;
+        SubClassif dclType;
+        String structure;
+        String parm;
+        String nonLocal;
+        public STIdentifier(String symbol, Classif primClassif, SubClassif subClassif, SubClassif type, String structure)
+        {
+            super(symbol, primClassif);
+            this.subClassif = subClassif;
+            this.dclType = type;
+            this.structure = structure;
+
         }
     }
 
@@ -18,15 +39,6 @@ public class SymbolTable {
 
         SubClassif subClassif;
         public STControl(String s, Classif pci, SubClassif sci)
-        {
-            super(s, pci);
-            this.subClassif = sci;
-        }
-    }
-
-    public class STIdentifier extends STEntry{
-        SubClassif subClassif;
-        public STIdentifier(String s, Classif pci, SubClassif sci)
         {
             super(s, pci);
             this.subClassif = sci;
@@ -42,17 +54,31 @@ public class SymbolTable {
         }
     }
 
-    public SymbolTable(){
-        ST = new HashMap<String, STEntry>();
-        initGlobal();
+    public class STSeparator extends STEntry{
+        SubClassif subClassif;
+        public STSeparator(String s, Classif pci)
+        {
+            super(s, pci);
+        }
     }
 
-    public void putSymbol(String s, STEntry e){
-        ST.put(s,e);
+    public class STOperand extends STEntry{
+        SubClassif subClassif;
+        public STOperand(String s, Classif pci, SubClassif sci)
+        {
+            super(s, pci);
+            this.subClassif = sci;
+        }
     }
+
+
+    public void putSymbol(String s, STEntry e){
+        ht.put(s,e);
+    }
+
     public STEntry getSymbol(String s){
-        if (ST.containsKey(s)){
-            return ST.get(s);
+        if (ht.containsKey(s)){
+            return ht.get(s);
         }
         return null;
     }
@@ -81,10 +107,10 @@ public class SymbolTable {
         this.putSymbol("in", new STEntry("in", Classif.OPERATOR));
         this.putSymbol("notin", new STEntry("notin", Classif.OPERATOR));
 
-        this.putSymbol("Int", new STIdentifier("Int", Classif.CONTROL, SubClassif.DECLARE));
-        this.putSymbol("Float", new STIdentifier("Float", Classif.CONTROL, SubClassif.DECLARE));
-        this.putSymbol("String", new STIdentifier("String", Classif.CONTROL, SubClassif.DECLARE));
-        this.putSymbol("Bool", new STIdentifier("Bool", Classif.CONTROL, SubClassif.DECLARE));
+        this.putSymbol("Int", new STControl("Int", Classif.CONTROL, SubClassif.DECLARE));
+        this.putSymbol("Float", new STControl("Float", Classif.CONTROL, SubClassif.DECLARE));
+        this.putSymbol("String", new STControl("String", Classif.CONTROL, SubClassif.DECLARE));
+        this.putSymbol("Bool", new STControl("Bool", Classif.CONTROL, SubClassif.DECLARE));
 
         this.putSymbol("if", new STControl("if", Classif.CONTROL, SubClassif.FLOW));
         this.putSymbol("endif", new STControl("endif", Classif.CONTROL, SubClassif.END));
@@ -95,5 +121,13 @@ public class SymbolTable {
         this.putSymbol("endwhile", new STControl("endwhile", Classif.CONTROL, SubClassif.END));
 
         this.putSymbol("print", new STFunction("print", Classif.FUNCTION, SubClassif.BUILTIN));
+
+
+        this.putSymbol(";", new STSeparator(";", Classif.SEPARATOR));
+        this.putSymbol(",", new STSeparator(",", Classif.SEPARATOR));
+        this.putSymbol("(", new STSeparator("(", Classif.SEPARATOR));
+        this.putSymbol(")", new STSeparator(")", Classif.SEPARATOR));
+
+        this.putSymbol("\"", new STFunction("\"", Classif.OPERAND, SubClassif.STRING));
     }
 }
