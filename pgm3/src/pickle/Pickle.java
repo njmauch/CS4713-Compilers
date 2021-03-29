@@ -23,6 +23,7 @@ public class Pickle
     {
         // Create the SymbolTable
         SymbolTable symbolTable = new SymbolTable();
+        StorageManager storageManager = new StorageManager();
 
         try
         {
@@ -32,7 +33,8 @@ public class Pickle
                     , "subClassif"
                     , "tokenStr");
             */
-            Parser parser = new Parser(new Scanner(args[0], symbolTable), symbolTable);
+            Scanner scan = new Scanner(args[0], symbolTable);
+            Parser parser = new Parser(scan, storageManager, symbolTable);
             parser.beginParse();
         }
         catch (Exception e)

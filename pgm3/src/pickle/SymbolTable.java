@@ -10,7 +10,7 @@ public class SymbolTable {
     }
 
     //Code for STEntry
-    public class STEntry {
+    public static class STEntry {
         String symbol;
         Classif primClassif;
         public STEntry(String symbol, Classif primClassif){
@@ -19,7 +19,7 @@ public class SymbolTable {
         }
     }
 
-    public class STIdentifier extends STEntry{
+    public static class STIdentifier extends STEntry{
         SubClassif subClassif;
         SubClassif dclType;
         String structure;

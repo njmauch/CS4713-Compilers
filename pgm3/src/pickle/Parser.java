@@ -1,6 +1,6 @@
 package pickle;
 
-import java.io.IOException;
+import javax.xml.transform.Result;
 
 public class Parser{
     public Scanner scan;
@@ -10,76 +10,74 @@ public class Parser{
     public Token currentParseToken;
 
 
-    Parser(Scanner scan, SymbolTable symbolTable)
+    Parser(Scanner scan, StorageManager storageManager, SymbolTable symbolTable)
     {
         this.scan = scan;
         this.symbolTable = symbolTable;
         this.sourceFileNm = scan.sourceFileNm;
-        this.storageManager = new StorageManager();
+        this.storageManager = storageManager;
     }
 
     public void beginParse () throws Exception {
-        scan.getNext();
+        ResultValue res;
         while(scan.currentToken.primClassif != Classif.EOF) {
-            statements(true);
-        }
-    }
-    public void nextParseToken() throws Exception {
-        if(scan.getNext().isEmpty()) {
-            currentParseToken = null;
-            return;
-        }
-        currentParseToken = scan.currentToken;
-    }
-    private void functionStmt () throws Exception {
-        if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
-            if(scan.currentToken.tokenStr.equals("print")) {
-                printParse();
-            }
-            else {
-                error("No function found with name %s", scan.currentToken.tokenStr);
+            res = statements(true);
+            if (res.type == SubClassif.END) {
+                error("Out of place token", res.terminatingStr);
             }
         }
     }
 
-    private ResultValue statements (boolean bExec) throws Exception {
-        ResultValue res = new ResultValue();
+    private ResultValue statements (Boolean bExec) throws Exception {
+        scan.getNext();
 
-        while (! scan.getNext().isEmpty()){
-            scan.getNext();
-            if (scan.currentToken.primClassif == Classif.EOF){
-                return res;
-            }
-
-            //Assign Value;
-            if (scan.currentToken.primClassif == Classif.OPERAND){
-                assigmentStmt();
-            }
-            else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.END)){
-                res.type = SubClassif.END;
-                res.terminatingStr = scan.currentToken.tokenStr;
-                return res;
-            }
-            else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.DECLARE)){
-                declareStmt();
-            }
-            else if (scan.currentToken.primClassif == Classif.CONTROL) {
-                controlStmt();
-            }
-            else if (scan.currentToken.primClassif == Classif.FUNCTION){
-                functionStmt();
-            }
-            else if (scan.currentToken.primClassif == Classif.OPERATOR) {
-                error("Can't start with operator");
-            }
-            else {
-                error("Invalid token");
+        if (scan.currentToken.primClassif == Classif.EOF) {
+            return new ResultValue(SubClassif.VOID, "", "primitive", "");
+        }
+        else if (scan.currentToken.primClassif == Classif.CONTROL) {
+            if (scan.currentToken.subClassif == SubClassif.DECLARE) {
+                return declareStmt(bExec);
             }
         }
-        return res;
     }
 
-    public void controlStmt() throws Exception {
+    public ResultValue declareStmt(Boolean bExec) throws Exception {
+        String structure = "primitive";
+        SubClassif type = SubClassif.EMPTY;
+
+        if(scan.currentToken.tokenStr.equals("Int")) {
+            type = SubClassif.INTEGER;
+        }
+        else if(scan.currentToken.tokenStr.equals("Float")) {
+            type = SubClassif.FLOAT;
+        }
+        else if(scan.currentToken.tokenStr.equals("Boolean")) {
+            type = SubClassif.BOOLEAN;
+        }
+        else if(scan.currentToken.tokenStr.equals("String")) {
+            type = SubClassif.STRING;
+        }
+        else {
+            error("Invalid declare type %s", scan.currentToken.tokenStr);
+        }
+
+        scan.getNext();
+
+        if(scan.currentToken.primClassif != Classif.OPERAND) {
+            error("%s is not an operand", scan.currentToken.tokenStr);
+        }
+        String variableStr = scan.currentToken.tokenStr;
+
+        if(bExec) {
+            Token tempToken = scan.currentToken;
+            storageManager.insertValue(variableStr, new ResultValue(type, "primitive"));
+        }
+        if(scan.nextToken.tokenStr.equals("=")) {
+            return assignmentStmt(true);
+        }
+        return new ResultValue(SubClassif.EMPTY,scan.currentToken.tokenStr,  "primitive", "");
+    }
+    public ResultValue controlStmt() throws Exception {
         ResultValue res = new ResultValue();
         while (true) {
             scan.getNext();
@@ -136,7 +134,7 @@ public class Parser{
             error("Expected ';' after endwhile ");
         }
     }
-    public void assigmentStmt() throws Exception {
+    public ResultValue assignmentStmt(Boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
             error("Expected a variable for the target assignment", scan.currentToken.tokenStr);
@@ -355,92 +353,7 @@ public class Parser{
         return res;
     }
 
-    public void declareStmt() throws Exception {
-        System.out.println("ENTER declareParse()");
-        String dclType = currentParseToken.tokenStr;
 
-        // Scan variable name
-        nextParseToken();
-        String variableName = currentParseToken.tokenStr;
-        SymbolTable.STControl dclTypeEntry = (SymbolTable.STControl) symbolTable.getSymbol(dclType);
-        if (dclTypeEntry.primClassif != Classif.CONTROL || dclTypeEntry.subClassif != SubClassif.DECLARE) {
-            error("Declaration error.  Incorrect symbol \"%s\" from token string \"%s\"", dclTypeEntry.symbol, dclType);
-        }
-
-        // Scan operator or semicolon
-        nextParseToken();
-        if(currentParseToken.tokenStr.equals("=")){
-            nextParseToken();
-            if((currentParseToken.primClassif != Classif.OPERAND) || (scan.currentToken.subClassif == SubClassif.IDENTIFIER)){
-                //TODO: do error return here.
-                System.out.println("Error");
-            }
-            nextParseToken();
-        }
-
-        Classif variablePrimClassif = Classif.EMPTY;
-        SubClassif variableSubClassif = SubClassif.EMPTY;
-        SubClassif variableType = SubClassif.EMPTY;
-        String structure = "";
-
-        if(dclType.equals("Int")) {
-            variablePrimClassif = Classif.OPERAND;
-            variableSubClassif = SubClassif.IDENTIFIER;
-            variableType = SubClassif.INTEGER;
-            structure = "primitive";
-        }
-        if(dclType.equals("Float")) {
-            variablePrimClassif = Classif.OPERAND;
-            variableSubClassif = SubClassif.IDENTIFIER;
-            variableType = SubClassif.FLOAT;
-            structure = "primitive";
-        }
-        if(dclType.equals("String")) {
-            variablePrimClassif = Classif.OPERAND;
-            variableSubClassif = SubClassif.IDENTIFIER;
-            variableType = SubClassif.STRING;
-            structure = "unbound array";
-        }
-        if(dclType.equals("Bool")) {
-            variablePrimClassif = Classif.OPERAND;
-            variableSubClassif = SubClassif.IDENTIFIER;
-            variableType = SubClassif.BOOLEAN;
-            structure = "primitive";
-        }
-
-        SymbolTable.STIdentifier declareEntry = symbolTable.new STIdentifier(variableName, variablePrimClassif, variableSubClassif, variableType, structure);
-
-        symbolTable.putSymbol(variableName, declareEntry);
-        // Check variable is declared
-        if(!symbolTable.ht.containsKey(variableName)) {
-            error("Declaration error.  \"%s\" not found in Symbol Table", variableName);
-        }
-        // Check semicolon
-        if(!scan.currentToken.tokenStr.equals(";")){
-            error("syntax error. Expected \";\" at \"%s\"", scan.currentToken.tokenStr);
-        }
-
-        SymbolTable.STIdentifier verifyEntry = (SymbolTable.STIdentifier) symbolTable.ht.get(variableName);
-        System.out.println("SYMBOL TABLE ENTRY");
-        System.out.println(verifyEntry.symbol);
-        System.out.println(verifyEntry.primClassif);
-        System.out.println(verifyEntry.subClassif);
-        System.out.println(verifyEntry.dclType);
-        System.out.println(verifyEntry.structure);
-        System.out.println();
-
-        ResultValue res = new ResultValue(declareEntry.dclType, "undefined", declareEntry.structure, "undefined");
-
-        storageManager.insertValue(declareEntry.symbol, res);
-        ResultValue testRes = storageManager.getValue(declareEntry.symbol);
-
-        System.out.println("STORAGE MANAGER ENTRY");
-        System.out.println(testRes.type);
-        System.out.println(testRes.value);
-        System.out.println(testRes.structure);
-        System.out.println(testRes.terminatingStr);
-
-    }
 
     public void error(String fmt, Object... varArgs) throws Exception
     {
