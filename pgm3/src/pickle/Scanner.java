@@ -98,6 +98,7 @@ public class Scanner {
                     textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
                     iColPos = 0;
                     getNextToken();
+                    return;
                 }
 
             } else {
@@ -124,6 +125,7 @@ public class Scanner {
 
         //Checking if token is string
         if (textCharM[iBeginTokenPos] == '\'' || textCharM[iBeginTokenPos] == '\"') {
+            nextToken.iSourceLineNr = iSourceLineNr;
             createStringToken(nextToken);
             return;
         }
@@ -133,10 +135,14 @@ public class Scanner {
                 if (textCharM[iColPos + 1] == '=') {
                     nextToken.primClassif = Classif.OPERATOR;
                     nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 2);
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    iColPos +=2;
                     return;
                 } else if (operators.indexOf(textCharM[iColPos]) > -1) {
                     nextToken.primClassif = Classif.OPERATOR;
                     nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    iColPos++;
                     return;
                 }
             }

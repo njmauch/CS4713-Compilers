@@ -113,7 +113,7 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue negative(Parser parser, ResultValue res) throws Exception {
+    public static ResultValue uMinus(Parser parser, ResultValue res) throws Exception {
         ResultValue resValue = null;
         Numeric nOp;
 

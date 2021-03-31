@@ -246,8 +246,9 @@ public class Parser{
         if(scan.currentToken.primClassif != Classif.OPERATOR) {
             error("expected assignment operator %s", scan.currentToken.tokenStr);
         }
-        scan.getNext();
         String operatorStr = scan.currentToken.tokenStr;
+        scan.getNext();
+
         ResultValue resO2;
         ResultValue resO1;
 
@@ -272,30 +273,42 @@ public class Parser{
     }
 
     private ResultValue expr() throws Exception{
-        ResultValue res = null;
-        Token popToken = null;
+        ResultValue res = new ResultValue();
+        Numeric nOp1 = null;
+        Numeric nOp2 = null;
 
-        ArrayList<Token> outStack = new ArrayList<Token>();
-        Stack<Token> stack = new Stack<Token>();
-        Stack<ResultValue> resultStack = new Stack<ResultValue>();
-
-        scan.getNext();
-
-        return res;
-    }
-
-    private ResultValue products() throws Exception
-    {
-        ResultValue res = operand();                    // Rule 3
-        ResultValue temp = new ResultValue();
-        while (scan.currentToken.tokenStr.equals("*") ) // * from rule 4.1
-        {
-            scan.getNext();
-            if (scan.currentToken.primClassif != Classif.OPERAND)
-                error("Within expression, expected operand.  Found: '%s'"
-                        , scan.currentToken.tokenStr);
-            temp = operand();                           // Rule 4.1
-            res = Utility.multiplication(this, res, temp);
+        while (true) {
+            if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
+                if(scan.currentToken.tokenStr != ("-")) {
+                    break;
+                }
+                if(scan.currentToken.primClassif != Classif.OPERAND) {
+                    error("Expected operand %s", scan.currentToken.tokenStr);
+                }
+                scan.getNext();
+                if(scan.currentToken.subClassif.equals(SubClassif.IDENTIFIER)) {
+                    SymbolTable.STEntry stEntry = this.symbolTable.getSymbol(scan.currentToken.tokenStr);
+                    if (stEntry.primClassif.equals(Classif.EMPTY)) {
+                        error("Symbol not found: %s", scan.currentToken.tokenStr);
+                    }
+                    if (stEntry.primClassif != Classif.OPERAND) {
+                        error("Expected Operand: %s", scan.currentToken.tokenStr);
+                    }
+                    res = this.smStorage.getValue(stEntry.symbol);
+                    if (res.type.equals(SubClassif.FLOAT) || res.type.equals(SubClassif.INTEGER)) {
+                        nOp1 = new Numeric(this, res, "-", "unary minus");
+                    }
+                }
+                else if (scan.currentToken.subClassif.equals(SubClassif.FLOAT) || scan.currentToken.subClassif.equals(SubClassif.INTEGER)) {
+                    ResultValue resTemp = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr);
+                    nOp1 = new Numeric(this, resTemp, "-", "Unary minus");
+                }
+                else {
+                    error("Need numeric value %s", scan.currentToken.tokenStr);
+                }
+                res = Utility.uMinus(this, res);
+                break;
+            }
         }
         return res;
     }
@@ -393,34 +406,6 @@ public class Parser{
                 error("expected a ‘;’after ‘endif’");
             }
         }
-    }
-
-
-
-    private ResultValue operand() throws Exception
-    {
-        ResultValue res;
-        if (scan.currentToken.primClassif == Classif.OPERAND)
-        {
-            switch (scan.currentToken.subClassif)
-            {
-                case IDENTIFIER:
-                    res = smStorage.getValue(scan.currentToken.tokenStr);
-                    scan.getNext();
-                    return res;
-                case INTEGER:
-                case FLOAT:
-                case STRING:
-                case BOOLEAN:
-                    res = scan.currentToken.toResult(this);  // Rule 5.1
-                    scan.getNext();                     // nextToken is operator or sep
-                    return res;
-            }
-
-        }
-        error("Within operand, found: '%s'"
-                , scan.currentToken.tokenStr);
-        return null; // fake for Java compiler
     }
 
 

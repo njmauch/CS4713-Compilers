@@ -71,37 +71,17 @@ public class Token
 
     }
 
-    public void hexPrint(int indent, String str)
-    {
-        int len = str.length();
-        char [] charray = str.toCharArray();
-        char ch;
-        // print each character in the string
-        for (int i = 0; i < len; i++)
-        {
-            ch = charray[i];
-            if (ch > 31 && ch < 127)   // ASCII printable characters
-                System.out.printf("%c", ch);
-            else
-                System.out.printf(". ");
+    public void hexPrint(int indentLength, String tokenStr) {
+        char [] strM = tokenStr.toCharArray();
+        int tempLength = tokenStr.length();
+
+        System.out.print("\n");
+        for(int i = 0; i < indentLength; i += 1) {
+            System.out.print(" ");
         }
-        System.out.printf("\n");
-        // indent the second line to the number of specified spaces
-        for (int i = 0; i < indent; i++)
-        {
-            System.out.printf(" ");
+        for (int i = 0; i < tempLength; i += 1) {
+            System.out.print(String.format("%02X", (int)strM[i]));
         }
-        // print the second line.  Non-printable characters will be shown
-        // as their hex value.  Printable will simply be a space
-        for (int i = 0; i < len; i++)
-        {
-            ch = charray[i];
-            // only deal with the printable characters
-            if (ch > 31 && ch < 127)   // ASCII printable characters
-                System.out.printf(" ", ch);
-            else
-                System.out.printf("%02X", (int) ch);
-        }
-        System.out.printf("\n");
+        System.out.print("\n");
     }
 }
