@@ -6,7 +6,7 @@ public class Numeric {
     public String strValue;
     public SubClassif type;
 
-    public Numeric(Parser parser, ResultValue resO1, String operand, String operandNumber) {
+    public Numeric(Parser parser, ResultValue resO1, String operand, String operandNumber) throws Exception {
         if(resO1.value == null) {
             System.err.printf(operandNumber + " of " + operand + " wasn't initialized\n");
         }
@@ -26,7 +26,7 @@ public class Numeric {
                     strValue += "0";
                 type = SubClassif.FLOAT;
             } catch (Exception e2) {
-                System.err.printf(operandNumber + " of " + operand + " isn't valid numeric\n");
+                parser.error("%s of %s isn't valid numeric", operand, operandNumber);
             }
         }
     }

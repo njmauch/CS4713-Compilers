@@ -5,7 +5,7 @@ public class SymbolTable {
     HashMap<String, STEntry> ht;
 
     public SymbolTable(){
-        ht = new HashMap<String, STEntry>();
+        ht = new HashMap<>();
         initGlobal();
     }
 

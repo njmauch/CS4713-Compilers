@@ -19,23 +19,15 @@ package pickle;
 
 public class Pickle
 {
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) throws Exception     {
         // Create the SymbolTable
         SymbolTable symbolTable = new SymbolTable();
-        StorageManager storageManager = new StorageManager();
-
+        StorageManager storeManager = new StorageManager();
+        Scanner scan = new Scanner(args[0], symbolTable);
         try
         {
-            /* Print a column heading
-            System.out.printf("%-11s %-12s %s\n"
-                    , "primClassif"
-                    , "subClassif"
-                    , "tokenStr");
-            */
-            Scanner scan = new Scanner(args[0], symbolTable);
-            Parser parser = new Parser(scan, storageManager, symbolTable);
-            parser.beginParse();
+            Parser parser = new Parser(scan, storeManager, symbolTable);
+            parser.getNext();
         }
         catch (Exception e)
         {

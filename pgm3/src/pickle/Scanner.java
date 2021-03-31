@@ -1,19 +1,19 @@
 package pickle;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 
 public class Scanner {
 
-    public String sourceFileNm = "";
+    public String sourceFileNm;
     public static ArrayList<String> sourceLineM;
     public SymbolTable symbolTable;
     public static char[] textCharM;
     public static int iSourceLineNr;
-    public static int iColPos;
+    public int iColPos;
     public Token currentToken;
     public Token nextToken;
+    public boolean bShowToken;
 
     private final static String whiteSpace = " \t\n";
     private final static String delimiters = " \t;:()\'\"=!<>+-*/[]#,^\n";
@@ -21,10 +21,11 @@ public class Scanner {
     private final static String operators = "+-*/<>!=#^";
     private final static String separators = "():;[],";
 
-    public Scanner(String sourceFileNm, SymbolTable symbolTable) throws Exception, FileNotFoundException {
+    public Scanner(String sourceFileNm, SymbolTable symbolTable) throws Exception {
         this.sourceFileNm = sourceFileNm;
         this.symbolTable = symbolTable;
-        sourceLineM = new ArrayList<String>();
+        sourceLineM = new ArrayList<>();
+        this.bShowToken = false;
 
         //Scanner to read input file
         java.util.Scanner scanner = new java.util.Scanner(new File(sourceFileNm));
@@ -36,56 +37,67 @@ public class Scanner {
 
         //Set Column and Line number to 0
         iSourceLineNr = 0;
-        iColPos = 0;
+        this.iColPos = 0;
 
         //Get the first line from the array and set it as character array
         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
 
-        //Gets next token
-        this.nextToken = getNextToken();
+        this.currentToken = new Token();
+        this.nextToken = new Token();
+        getNextToken();
     }
 
     public String getNext() throws Exception {
 
-        this.currentToken = Token.copyToken(this.nextToken);
-        this.nextToken = getNextToken();
+        currentToken = nextToken;
+        getNextToken();
 
-        return this.currentToken.tokenStr;
+        if(bShowToken) {
+            System.out.println("...");
+            currentToken.printToken();
+        }
+
+        return currentToken.tokenStr;
     }
 
-    public Token getNextToken() throws Exception {
+    private void getNextToken() throws Exception {
         int iBeginTokenPos;
         int iEndTokenPos;
-        Token tempToken = new Token();
+        nextToken = new Token();
 
         //If new line print out the line
         if (iColPos == 0) {
             //If the current line is empty (whitespace), print out lines until it reaches non empty line
             if (sourceLineM.get(iSourceLineNr).isEmpty()) {
                 while (sourceLineM.get(iSourceLineNr).isEmpty()) {
-                    System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
+                    //System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
                     iSourceLineNr++;
                 }
             }
             //Prints out line with tokens
-            System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
+            //System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
         }
 
         while (true) {
             if (iColPos + 1 >= textCharM.length) {
                 iSourceLineNr++;
                 if (iSourceLineNr >= sourceLineM.size()) {
-                    tempToken.tokenStr = "";
-                    tempToken.primClassif = Classif.EOF;
-                    tempToken.iSourceLineNr = iSourceLineNr;
-                    return tempToken;
+                    nextToken.tokenStr = "";
+                    nextToken.primClassif = Classif.EOF;
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    return;
                 }
                 else if (separators.indexOf(textCharM[iColPos]) > -1) {
-                    tempToken.primClassif = Classif.SEPARATOR;
-                    tempToken.tokenStr = new String(textCharM, iColPos, 1);
+                    nextToken.primClassif = Classif.SEPARATOR;
+                    nextToken.tokenStr = new String(textCharM, iColPos, 1);
                     textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
                     iColPos = 0;
-                    return tempToken;
+                    return;
+                }
+                else {
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    iColPos = 0;
+                    getNextToken();
                 }
 
             } else {
@@ -112,55 +124,67 @@ public class Scanner {
 
         //Checking if token is string
         if (textCharM[iBeginTokenPos] == '\'' || textCharM[iBeginTokenPos] == '\"') {
-            createStringToken(tempToken);
-            return tempToken;
+            createStringToken(nextToken);
+            return;
         }
 
         if (iBeginTokenPos == iColPos) {
             if (strOperators.indexOf(textCharM[iColPos]) > -1) {
                 if (textCharM[iColPos + 1] == '=') {
-                    tempToken.primClassif = Classif.OPERATOR;
-                    tempToken.tokenStr = new String(textCharM, iBeginTokenPos, 2);
-                    return tempToken;
+                    nextToken.primClassif = Classif.OPERATOR;
+                    nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 2);
+                    return;
                 } else if (operators.indexOf(textCharM[iColPos]) > -1) {
-                    tempToken.primClassif = Classif.OPERATOR;
-                    tempToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
-                    return tempToken;
+                    nextToken.primClassif = Classif.OPERATOR;
+                    nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
+                    return;
                 }
             }
         }
 
 
         iEndTokenPos = iColPos;
-        tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
-        tempToken.iColPos = iBeginTokenPos;
-        tempToken.iSourceLineNr = iSourceLineNr;
+        nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+        nextToken.iColPos = iBeginTokenPos;
+        nextToken.iSourceLineNr = iSourceLineNr;
 
-        SymbolTable.STEntry entryResult = symbolTable.getSymbol(tempToken.tokenStr);
+        SymbolTable.STEntry entryResult = symbolTable.getSymbol(nextToken.tokenStr);
 
         if (entryResult != null) {
-            tempToken.primClassif = entryResult.primClassif;
+            nextToken.primClassif = entryResult.primClassif;
 
             if (entryResult instanceof SymbolTable.STControl) {
-                tempToken.subClassif = ((SymbolTable.STControl) entryResult).subClassif;
-                tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
-                return tempToken;
+                nextToken.subClassif = ((SymbolTable.STControl) entryResult).subClassif;
+                nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+                return;
             } else if (entryResult instanceof SymbolTable.STFunction) {
-                tempToken.subClassif = ((SymbolTable.STFunction) entryResult).subClassif;
-                tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
-                return tempToken;
+                nextToken.subClassif = ((SymbolTable.STFunction) entryResult).subClassif;
+                nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+                return;
             } else if (entryResult instanceof SymbolTable.STIdentifier) {
-                tempToken.subClassif = ((SymbolTable.STIdentifier) entryResult).subClassif;
-                tempToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
-                return tempToken;
+                nextToken.subClassif = ((SymbolTable.STIdentifier) entryResult).subClassif;
+                nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+                return;
             }
-        } else {
-            createOperandToken(tempToken);
-            return tempToken;
+        } else if (separators.contains(nextToken.tokenStr)) {
+            nextToken.primClassif = Classif.SEPARATOR;
+            nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
+            iColPos++;
+            return;
         }
-        return tempToken;
+        else {
+            createOperandToken(nextToken);
+            return;
+        }
     }
 
+    public void setPosition(Token token) throws Exception {
+        iSourceLineNr = token.iSourceLineNr;
+        this.iColPos = token.iColPos;
+        textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+        this.getNext();
+        this.getNext();
+    }
     private void createStringToken(Token strToken) throws Exception {
         strToken.primClassif = Classif.OPERAND;
         strToken.subClassif = SubClassif.STRING;
@@ -224,7 +248,7 @@ public class Scanner {
                 if (c == '.') {
                     //If bIsFloat is true, that means second decimal has been found so raise exception
                     if (bIsFloat == 1) {
-                        System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm));
+                        System.err.printf("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm);
                         throw new Exception();
                     }
                     //First decimal found so set float flag to true
@@ -235,7 +259,7 @@ public class Scanner {
                 }
                 //If encountering a non numeric character in the number raise exception
                 else if (!(Character.isDigit(c))) {
-                    System.err.print(String.format("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm));
+                    System.err.printf("Line: %d Invalid number format: '%s', File: %s\n", iSourceLineNr + 1, "token" /*tokenStr*/, sourceFileNm);
                     throw new Exception();
                 }
                 tempStr.append(c);
