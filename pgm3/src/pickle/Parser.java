@@ -1,7 +1,5 @@
 package pickle;
 
-import java.util.ArrayList;
-import java.util.Stack;
 
 public class Parser{
     public Scanner scan;
@@ -44,7 +42,7 @@ public class Parser{
                 error("Can't start with operator", scan.currentToken);
             }
             else {
-                error("Unknown token", scan.currentToken);
+                error("Unknown token %s", scan.currentToken.tokenStr);
             }
         }
     }
@@ -230,7 +228,7 @@ public class Parser{
 
         SymbolTable.STEntry stEntry = symbolTable.getSymbol(variableStr);
 
-        symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, Classif.OPERAND, dclType, dclType, "primitive"));
+        symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, Classif.OPERAND, SubClassif.IDENTIFIER, dclType,"primitive"));
 
         return res;
 
@@ -238,6 +236,8 @@ public class Parser{
 
     public ResultValue assigmentStmt() throws Exception {
         ResultValue res = new ResultValue();
+        Numeric nOp2 = null;
+        Numeric nOp1 = null;
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
             error("Expected a variable for the target assignment %s", scan.currentToken.tokenStr);
         }
@@ -259,15 +259,22 @@ public class Parser{
                 break;
             case "-=":
                 resO2 = expr();
+                nOp2 = new Numeric(this, resO2, "-=", "2nd Operand");
                 resO1 = this.smStorage.getValue(variableStr);
-                res = assign(variableStr, Utility.subtraction(this, resO1, resO2));
+                nOp1 = new Numeric(this, resO1, "-=", "1st Operand");
+                res = assign(variableStr, Utility.subtraction(this, nOp1, nOp2));
                 break;
             case "+=":
                 resO2 = expr();
+                nOp2 = new Numeric(this, resO2, "-=", "2nd Operand");
                 resO1 = this.smStorage.getValue(variableStr);
-                res = assign(variableStr, Utility.addition(this, resO1, resO2));
+                nOp1 = new Numeric(this, resO1, "-=", "1st Operand");
+                res = assign(variableStr, Utility.addition(this, nOp1, nOp2));
             default:
                 error("expected assignment operator");
+        }
+        if(!scan.getNext().equals(";")) {
+            error("Must end in ';'");
         }
         return res;
     }
@@ -275,18 +282,18 @@ public class Parser{
     private ResultValue expr() throws Exception{
         ResultValue res = new ResultValue();
         Numeric nOp1 = null;
-        Numeric nOp2 = null;
+        Numeric nOp2;
 
         while (true) {
             if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
-                if(scan.currentToken.tokenStr != ("-")) {
+                if (scan.currentToken.tokenStr != ("-")) {
                     break;
                 }
-                if(scan.currentToken.primClassif != Classif.OPERAND) {
+                if (scan.currentToken.primClassif != Classif.OPERAND) {
                     error("Expected operand %s", scan.currentToken.tokenStr);
                 }
                 scan.getNext();
-                if(scan.currentToken.subClassif.equals(SubClassif.IDENTIFIER)) {
+                if (scan.currentToken.subClassif.equals(SubClassif.IDENTIFIER)) {
                     SymbolTable.STEntry stEntry = this.symbolTable.getSymbol(scan.currentToken.tokenStr);
                     if (stEntry.primClassif.equals(Classif.EMPTY)) {
                         error("Symbol not found: %s", scan.currentToken.tokenStr);
@@ -298,16 +305,70 @@ public class Parser{
                     if (res.type.equals(SubClassif.FLOAT) || res.type.equals(SubClassif.INTEGER)) {
                         nOp1 = new Numeric(this, res, "-", "unary minus");
                     }
-                }
-                else if (scan.currentToken.subClassif.equals(SubClassif.FLOAT) || scan.currentToken.subClassif.equals(SubClassif.INTEGER)) {
+                } else if (scan.currentToken.subClassif.equals(SubClassif.FLOAT) || scan.currentToken.subClassif.equals(SubClassif.INTEGER)) {
                     ResultValue resTemp = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr);
                     nOp1 = new Numeric(this, resTemp, "-", "Unary minus");
-                }
-                else {
+                } else {
                     error("Need numeric value %s", scan.currentToken.tokenStr);
                 }
-                res = Utility.uMinus(this, res);
+                res = Utility.uMinus(this, nOp1);
                 break;
+            }
+            else if (scan.currentToken.primClassif.equals(Classif.OPERAND)) {
+                if(scan.currentToken.subClassif.equals(SubClassif.IDENTIFIER)) {
+                    SymbolTable.STEntry stEntry = this.symbolTable.getSymbol(scan.currentToken.tokenStr);
+                    if (stEntry.primClassif.equals(Classif.EMPTY)) {
+                        error("Symbol not found: %s", scan.currentToken.tokenStr);
+                    }
+                    if (stEntry.primClassif != Classif.OPERAND) {
+                        error("Expected Operand: %s", scan.currentToken.tokenStr);
+                    }
+                    res = this.smStorage.getValue(stEntry.symbol);
+                    break;
+                }
+                else if(scan.currentToken.subClassif.equals(SubClassif.INTEGER) || scan.currentToken.subClassif.equals(SubClassif.FLOAT)) {
+                    res = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr, "primitive", "");
+                    break;
+                }
+                else if (scan.currentToken.subClassif.equals(SubClassif.BOOLEAN) || scan.currentToken.subClassif.equals(SubClassif.STRING)) {
+                    res = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr, "primitive");
+                    return res;
+                }
+            }
+        }
+        if(scan.nextToken.primClassif != Classif.SEPARATOR) {
+            scan.getNext();
+            if (scan.currentToken.primClassif != Classif.OPERATOR) {
+                error("Invalid token %s", scan.currentToken.tokenStr);
+            }
+
+            if (scan.currentToken.tokenStr.equals(">") || scan.currentToken.tokenStr.equals("<") || scan.currentToken.tokenStr.equals(">=") ||
+                    scan.currentToken.tokenStr.equals("<=") || scan.currentToken.tokenStr.equals("==") || scan.currentToken.tokenStr.equals("!=") ||
+                    scan.currentToken.tokenStr.equals("and") || scan.currentToken.tokenStr.equals("or") || scan.currentToken.tokenStr.equals("not")) {
+                res = evalCond();
+                return res;
+            }
+
+            String opStr = scan.currentToken.tokenStr;
+
+            scan.getNext();
+
+            ResultValue resO2 = expr();
+
+            if (res.type != SubClassif.FLOAT && res.type != SubClassif.INTEGER) {
+                error("Expected numeric value: %s", res.value);
+            }
+
+            nOp1 = new Numeric(this, res, scan.currentToken.tokenStr, "1st operand");
+            nOp2 = new Numeric(this, resO2, scan.currentToken.tokenStr, "2nd Operand");
+
+            switch (opStr) {
+                case "+" -> res = Utility.addition(this, nOp1, nOp2);
+                case "-" -> res = Utility.subtraction(this, nOp1, nOp2);
+                case "/" -> res = Utility.division(this, nOp1, nOp2);
+                case "*" -> res = Utility.multiplication(this, nOp1, nOp2);
+                case "^" -> res = Utility.exponential(this, nOp1, nOp2);
+                default -> error("Invalid operator: %s", scan.currentToken.tokenStr);
             }
         }
         return res;
@@ -317,41 +378,32 @@ public class Parser{
         scan.getNext();
 
         ResultValue resO1 = null;
-        ResultValue resO2 = null;
+        ResultValue resO2;
         ResultValue res = new ResultValue();
         String opStr;
-        Token opToken;
+        Numeric nOp1;
+        Numeric nOp2;
 
         if(scan.currentToken.primClassif != Classif.OPERATOR) {
             resO1 = expr();
         }
 
         opStr = scan.currentToken.tokenStr;
-        opToken = scan.currentToken;
 
         scan.getNext();
         resO2 = expr();
 
-        if(opStr.equals(">")) {
-            res = Utility.greaterThan(this, resO1, resO2);
-        }
-        else if (opStr.equals("<")) {
-            res = Utility.lessThan(this, resO1, resO2);
-        }
-        else if (opStr.equals(">=")) {
-            res = Utility.greaterThanOrEqual(this, resO1, resO2);
-        }
-        else if (opStr.equals("<=")) {
-            res = Utility.lessThanOrEqual(this, resO1, resO2);
-        }
-        else if (opStr.equals("==")) {
-            res = Utility.equal(this, resO1, resO2);
-        }
-        else if (opStr.equals("!=")) {
-            res = Utility.notEqual(this, resO1, resO2);
-        }
-        else {
-            error("Bad compare token");
+        nOp1 = new Numeric(this, res, scan.currentToken.tokenStr, "1st operand");
+        nOp2 = new Numeric(this, resO2, scan.currentToken.tokenStr, "2nd Operand");
+
+        switch (opStr) {
+            case ">" -> res = Utility.greaterThan(this, nOp1, nOp2);
+            case "<" -> res = Utility.lessThan(this, nOp1, nOp2);
+            case ">=" -> res = Utility.greaterThanOrEqual(this, nOp1, nOp2);
+            case "<=" -> res = Utility.lessThanOrEqual(this, nOp1, nOp2);
+            case "==" -> res = Utility.equal(this, nOp1, nOp2);
+            case "!=" -> res = Utility.notEqual(this, nOp1, nOp2);
+            default -> error("Bad compare token");
         }
         return res;
     }

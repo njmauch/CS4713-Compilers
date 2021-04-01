@@ -2,13 +2,8 @@ package pickle;
 
 public class Utility {
 
-    public static ResultValue addition(Parser parser, ResultValue resO2, ResultValue resO1) throws Exception {
+    public static ResultValue addition(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
         ResultValue resValue = null;
-        Numeric nOp2;
-        Numeric nOp1;
-
-        nOp2 = new Numeric(parser, resO2, "+=", "2nd Operand");
-        nOp1 = new Numeric(parser, resO1, "+=", "1st Operand");
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue + nOp2.integerValue;
@@ -24,13 +19,8 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue subtraction(Parser parser, ResultValue resO2, ResultValue resO1) throws Exception {
+    public static ResultValue subtraction(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
         ResultValue resValue = null;
-        Numeric nOp2;
-        Numeric nOp1;
-
-        nOp2 = new Numeric(parser, resO2, "-=", "2nd Operand");
-        nOp1 = new Numeric(parser, resO1, "-=", "1st Operand");
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue - nOp2.integerValue;
@@ -46,13 +36,8 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue multiplication(Parser parser, ResultValue resO2, ResultValue resO1) throws Exception {
+    public static ResultValue multiplication(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
         ResultValue resValue = null;
-        Numeric nOp2;
-        Numeric nOp1;
-
-        nOp2 = new Numeric(parser, resO2, "*", "2nd Operand");
-        nOp1 = new Numeric(parser, resO1, "*", "1st Operand");
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue * nOp2.integerValue;
@@ -68,13 +53,8 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue division(Parser parser, ResultValue resO2, ResultValue resO1) throws Exception {
+    public static ResultValue division(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
         ResultValue resValue = null;
-        Numeric nOp2;
-        Numeric nOp1;
-
-        nOp2 = new Numeric(parser, resO2, "/", "2nd Operand");
-        nOp1 = new Numeric(parser, resO1, "/", "1st Operand");
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue / nOp2.integerValue;
@@ -90,14 +70,8 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue exponential(Parser parser, ResultValue resO2, ResultValue resO1) throws Exception {
+    public static ResultValue exponential(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
         ResultValue resValue = null;
-        Numeric nOp2;
-        Numeric nOp1;
-
-        nOp2 = new Numeric(parser, resO2, "^", "2nd Operand");
-        nOp1 = new Numeric(parser, resO1, "^", "1st Operand");
-
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = (int) Math.pow(nOp1.integerValue, nOp2.integerValue);
@@ -113,11 +87,8 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue uMinus(Parser parser, ResultValue res) throws Exception {
+    public static ResultValue uMinus(Parser parser, Numeric nOp) throws Exception {
         ResultValue resValue = null;
-        Numeric nOp;
-
-        nOp = new Numeric(parser, res, "U-", "1st Operand");
 
         if(nOp.type == SubClassif.INTEGER) {
             int intResult = -nOp.integerValue;
@@ -133,32 +104,32 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue lessThan(Parser parser, ResultValue resO2, ResultValue resO1){
+    public static ResultValue lessThan(Parser parser, Numeric nOp1, Numeric nOp2){
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
         return res;
     }
 
-    public static ResultValue greaterThan(Parser parser, ResultValue resO2, ResultValue resO1){
+    public static ResultValue greaterThan(Parser parser, Numeric nOp1, Numeric nOp2){
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
         return res;
     }
 
-    public static ResultValue greaterThanOrEqual(Parser parser, ResultValue resO2, ResultValue resO1){
+    public static ResultValue greaterThanOrEqual(Parser parser, Numeric nOp1, Numeric nOp2){
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
         return res;
     }
 
-    public static ResultValue lessThanOrEqual(Parser parser, ResultValue resO2, ResultValue resO1){
+    public static ResultValue lessThanOrEqual(Parser parser, Numeric nOp1, Numeric nOp2){
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
         return res;
     }
 
-    public static ResultValue equal(Parser parser, ResultValue resO2, ResultValue resO1){
+    public static ResultValue equal(Parser parser, Numeric nOp1, Numeric nOp2){
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
         return res;
     }
 
-    public static ResultValue notEqual(Parser parser, ResultValue resO2, ResultValue resO1){
+    public static ResultValue notEqual(Parser parser, Numeric nOp1, Numeric nOp2){
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
         return res;
     }
