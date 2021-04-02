@@ -62,7 +62,7 @@ public class Parser{
 
         scan.getNext();
         while (! scan.getNext().isEmpty()){
-            scan.getNext();
+            //scan.getNext();
             if (scan.currentToken.primClassif == Classif.EOF){
                 return res;
             }
@@ -159,7 +159,7 @@ public class Parser{
                 }
             }
         }
-        res.terminatingStr = scan.getNext();
+        res.terminatingStr = scan.nextToken.tokenStr;
         return res;
     }
 
