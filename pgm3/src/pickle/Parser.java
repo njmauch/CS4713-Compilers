@@ -29,13 +29,13 @@ public class Parser{
                 return;
             }
             if (scan.currentToken.primClassif.equals(Classif.OPERAND)) {
-                assigmentStmt();
+                assigmentStmt(true);
             }
             else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.DECLARE)){
-                declareStmt();
+                declareStmt(true);
             }
             else if (scan.currentToken.primClassif.equals(Classif.FUNCTION)) {
-                functionStmt();
+                functionStmt(true);
             } else if (scan.currentToken.primClassif.equals(Classif.CONTROL)) {
                 controlStmt(true);
             } else if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
@@ -68,7 +68,7 @@ public class Parser{
             }
             //Assign Value;
             if (scan.currentToken.primClassif == Classif.OPERAND){
-                assigmentStmt();
+                assigmentStmt(bExec);
             }
             else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.END)){
                 res.type = SubClassif.END;
@@ -76,13 +76,13 @@ public class Parser{
                 return res;
             }
             else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.DECLARE)){
-                declareStmt();
+                declareStmt(bExec);
             }
             else if (scan.currentToken.primClassif == Classif.CONTROL) {
-                controlStmt(true);
+                controlStmt(bExec);
             }
             else if (scan.currentToken.primClassif == Classif.FUNCTION){
-                functionStmt();
+                functionStmt(bExec);
             }
             else if (scan.currentToken.primClassif == Classif.OPERATOR) {
                 error("Can't start with operator");
@@ -94,7 +94,7 @@ public class Parser{
         return res;
     }
 
-    private void functionStmt () throws Exception {
+    private void functionStmt (boolean bExec) throws Exception {
         if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
             if(scan.currentToken.tokenStr.equals("print")) {
                 print();
@@ -151,10 +151,10 @@ public class Parser{
             }
             if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.FLOW)) {
                 if (scan.currentToken.tokenStr.equals("if")) {
-                    ifStmt(true);
+                    ifStmt(bExec);
                     break;
                 } else if (scan.currentToken.tokenStr.equals("while")) {
-                    whileStmt(true);
+                    whileStmt(bExec);
                     break;
                 }
             }
@@ -169,8 +169,9 @@ public class Parser{
 
         tempToken = scan.currentToken;
         if (bExec) {
-            ResultValue res01 = expr();
-            if (!scan.currentToken.tokenStr.equals(":")) {
+            ResultValue res01 = evalCond();
+            //scan.getNext();
+            if (!scan.nextToken.tokenStr.equals(":")) {
                 error("Expected ':' after while");
             }
             if (res01.type != SubClassif.BOOLEAN) {
@@ -185,7 +186,7 @@ public class Parser{
                     error("Expected ';' after endwhile");
                 }
                 scan.setPosition(tempToken);
-                res01 = expr();
+                res01 = evalCond();
             }
         } else {
             skipTo(":");
@@ -199,7 +200,7 @@ public class Parser{
         }
     }
 
-    private ResultValue declareStmt() throws Exception {
+    private ResultValue declareStmt(boolean bExec) throws Exception {
         ResultValue res;
 
         SubClassif dclType = SubClassif.EMPTY;
@@ -235,7 +236,7 @@ public class Parser{
 
     }
 
-    public ResultValue assigmentStmt() throws Exception {
+    public ResultValue assigmentStmt(boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
         Numeric nOp2;
         Numeric nOp1;
@@ -415,6 +416,7 @@ public class Parser{
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
+                    skipTo("endif");
                     resTemp = statements(false);
                 }
                 if (!resTemp.terminatingStr.equals("endif")) {
@@ -424,6 +426,7 @@ public class Parser{
                     error("expected a ‘;’after ‘endif’");
                 }
             } else {
+                skipTo("else");
                 resTemp = statements(false);
                 if (resTemp.terminatingStr.equals("else")) {
                     if (!scan.getNext().equals(":")) {
