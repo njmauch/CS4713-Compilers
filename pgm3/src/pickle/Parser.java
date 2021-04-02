@@ -37,7 +37,7 @@ public class Parser{
             else if (scan.currentToken.primClassif.equals(Classif.FUNCTION)) {
                 functionStmt();
             } else if (scan.currentToken.primClassif.equals(Classif.CONTROL)) {
-                controlStmt();
+                controlStmt(true);
             } else if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
                 error("Can't start with operator", scan.currentToken);
             }
@@ -60,12 +60,12 @@ public class Parser{
     private ResultValue statements (boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
 
+        scan.getNext();
         while (! scan.getNext().isEmpty()){
             scan.getNext();
             if (scan.currentToken.primClassif == Classif.EOF){
                 return res;
             }
-
             //Assign Value;
             if (scan.currentToken.primClassif == Classif.OPERAND){
                 assigmentStmt();
@@ -79,7 +79,7 @@ public class Parser{
                 declareStmt();
             }
             else if (scan.currentToken.primClassif == Classif.CONTROL) {
-                controlStmt();
+                controlStmt(true);
             }
             else if (scan.currentToken.primClassif == Classif.FUNCTION){
                 functionStmt();
@@ -132,16 +132,19 @@ public class Parser{
             res = expr();
             printStr.append(res.value);
             printStr.append(" ");
+            if(scan.nextToken.tokenStr.equals(")")) {
+                parenCount--;
+            }
             scan.getNext();
         }
         System.out.println(printStr.toString());
         scan.getNext();
     }
 
-    public ResultValue controlStmt() throws Exception {
+    public ResultValue controlStmt(boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
         while (true) {
-            scan.getNext();
+            //scan.getNext();
 
             if (scan.currentToken.primClassif == Classif.EOF) {
                 return res;
@@ -284,10 +287,10 @@ public class Parser{
 
         while (true) {
             if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
-                if (scan.currentToken.tokenStr != ("-")) {
-                    break;
-                }
-                if (scan.currentToken.primClassif != Classif.OPERAND) {
+                //if (! scan.currentToken.tokenStr.equals("-")) {
+                    //break;
+                //}
+                if (scan.currentToken.primClassif != Classif.OPERAND && ! scan.currentToken.tokenStr.equals("-")) {
                     error("Expected operand %s", scan.currentToken.tokenStr);
                 }
                 scan.getNext();
@@ -402,10 +405,12 @@ public class Parser{
 
     void ifStmt(Boolean bExec) throws Exception {
         int saveLineNr = scan.currentToken.iSourceLineNr;
+        ResultValue resCond;
+        ResultValue resTemp;
         if (bExec) {
-            ResultValue resCond = evalCond();
+            resCond = evalCond();
             if (resCond.value.equals("T")) {
-                ResultValue resTemp = statements(true);
+                resTemp = statements(true);
                 if (resTemp.terminatingStr.equals("else")) {
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
@@ -419,7 +424,7 @@ public class Parser{
                     error("expected a ‘;’after ‘endif’");
                 }
             } else {
-                ResultValue resTemp = statements(false);
+                resTemp = statements(false);
                 if (resTemp.terminatingStr.equals("else")) {
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
@@ -436,7 +441,7 @@ public class Parser{
         }
         else {
             skipTo(":");
-            ResultValue resTemp = statements(false);
+            resTemp = statements(false);
             if (resTemp.terminatingStr.equals("else")) {
                 if (!scan.getNext().equals(":")) {
                     error("expected a ‘:’after ‘else’");
