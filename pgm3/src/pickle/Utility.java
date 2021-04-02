@@ -14,7 +14,7 @@ public class Utility {
             resValue = new ResultValue( nOp1.type, Double.toString(dResult), "primitive");
         }
         else{
-            System.err.print(nOp1.strValue + " / " + nOp2.strValue + " are not numeric\n");
+            parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
         }
         return resValue;
     }
@@ -31,7 +31,7 @@ public class Utility {
             resValue = new ResultValue(nOp1.type, Double.toString(dResult), "primitive");
         }
         else{
-            System.err.print(nOp1.strValue + " / " + nOp2.strValue + " are not numeric\n");
+            parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
         }
         return resValue;
     }
@@ -48,7 +48,7 @@ public class Utility {
             resValue = new ResultValue(nOp1.type,Double.toString(dResult),  "primitive");
         }
         else{
-            System.err.print(nOp1.strValue + " / " + nOp2.strValue + " are not numeric\n");
+            parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
         }
         return resValue;
     }
@@ -65,7 +65,7 @@ public class Utility {
             resValue = new ResultValue(nOp1.type, Double.toString(dResult), "primitive");
         }
         else{
-            System.err.print(nOp1.strValue + " / " + nOp2.strValue + " are not numeric\n");
+            parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
         }
         return resValue;
     }
@@ -82,7 +82,7 @@ public class Utility {
             resValue = new ResultValue(nOp1.type, Double.toString(dResult), "primitive");
         }
         else{
-            System.err.print(nOp1.strValue + " / " + nOp2.strValue + " are not numeric\n");
+            parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
         }
         return resValue;
     }
@@ -99,38 +99,260 @@ public class Utility {
             resValue = new ResultValue(nOp.type, Double.toString(dResult), "primitive");
         }
         else {
-            System.err.print(nOp.strValue + " is not numeric\n");
+            parser.error(nOp.strValue + " is not numeric");
         }
         return resValue;
     }
 
-    public static ResultValue lessThan(Parser parser, Numeric nOp1, Numeric nOp2){
+    public static ResultValue lessThan(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            String intResult = Utility.castInt(parser, resO2);
+            int intOp1 = Integer.parseInt(resO1.value);
+            int intOp2 = Integer.parseInt(intResult);
+            if (intOp1 < intOp2) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            String dResult = Utility.castFloat(parser, resO2);
+            double dOp1 = Double.parseDouble(resO1.value);
+            double dOp2 = Double.parseDouble(dResult);
+            if (dOp1 < dOp2) {
+                res.value = "T";
+            } else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.STRING)) {
+            int strComp = resO1.value.compareTo(resO2.value);
+            if(strComp < 0) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN)){
+            parser.error("Cannot not perform compare on Boolean %s", resO1.value);
+        }
+        else {
+            parser.error("Uknown type: %s", resO1.type);
+        }
         return res;
     }
 
-    public static ResultValue greaterThan(Parser parser, Numeric nOp1, Numeric nOp2){
+    public static ResultValue greaterThan(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            String intResult = Utility.castInt(parser, resO2);
+            int intOp1 = Integer.parseInt(resO1.value);
+            int intOp2 = Integer.parseInt(intResult);
+            if (intOp1 > intOp2) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            String dResult = Utility.castFloat(parser, resO2);
+            double dOp1 = Double.parseDouble(resO1.value);
+            double dOp2 = Double.parseDouble(dResult);
+            if (dOp1 > dOp2) {
+                res.value = "T";
+            } else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.STRING)) {
+            int strComp = resO1.value.compareTo(resO2.value);
+            if(strComp > 0) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN)){
+            parser.error("Cannot not perform compare on Boolean %s", resO1.value);
+        }
+        else {
+            parser.error("Uknown type: %s", resO1.type);
+        }
         return res;
     }
 
-    public static ResultValue greaterThanOrEqual(Parser parser, Numeric nOp1, Numeric nOp2){
+    public static ResultValue greaterThanOrEqual(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            String intResult = Utility.castInt(parser, resO2);
+            int intOp1 = Integer.parseInt(resO1.value);
+            int intOp2 = Integer.parseInt(intResult);
+            if (intOp1 >= intOp2) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            String dResult = Utility.castFloat(parser, resO2);
+            double dOp1 = Double.parseDouble(resO1.value);
+            double dOp2 = Double.parseDouble(dResult);
+            if (dOp1 >= dOp2) {
+                res.value = "T";
+            } else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.STRING)) {
+            int strComp = resO1.value.compareTo(resO2.value);
+            if(strComp >= 0) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN)){
+            parser.error("Cannot not perform compare on Boolean %s", resO1.value);
+        }
+        else {
+            parser.error("Uknown type: %s", resO1.type);
+        }
         return res;
     }
 
-    public static ResultValue lessThanOrEqual(Parser parser, Numeric nOp1, Numeric nOp2){
+    public static ResultValue lessThanOrEqual(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            String intResult = Utility.castInt(parser, resO2);
+            int intOp1 = Integer.parseInt(resO1.value);
+            int intOp2 = Integer.parseInt(intResult);
+            if (intOp1 <= intOp2) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            String dResult = Utility.castFloat(parser, resO2);
+            double dOp1 = Double.parseDouble(resO1.value);
+            double dOp2 = Double.parseDouble(dResult);
+            if (dOp1 <= dOp2) {
+                res.value = "T";
+            } else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.STRING)) {
+            int strComp = resO1.value.compareTo(resO2.value);
+            if(strComp <= 0) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN)){
+            parser.error("Cannot not perform compare on Boolean %s", resO1.value);
+        }
+        else {
+            parser.error("Uknown type: %s", resO1.type);
+        }
         return res;
     }
 
-    public static ResultValue equal(Parser parser, Numeric nOp1, Numeric nOp2){
+    public static ResultValue equal(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            String intResult = Utility.castInt(parser, resO2);
+            int intOp1 = Integer.parseInt(resO1.value);
+            int intOp2 = Integer.parseInt(intResult);
+            if (intOp1 == intOp2) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            String dResult = Utility.castFloat(parser, resO2);
+            double dOp1 = Double.parseDouble(resO1.value);
+            double dOp2 = Double.parseDouble(dResult);
+            if (dOp1 == dOp2) {
+                res.value = "T";
+            } else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.STRING)) {
+            int strComp = resO1.value.compareTo(resO2.value);
+            if(strComp == 0) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN)){
+            parser.error("Cannot not perform compare on Boolean %s", resO1.value);
+        }
+        else {
+            parser.error("Uknown type: %s", resO1.type);
+        }
         return res;
     }
 
-    public static ResultValue notEqual(Parser parser, Numeric nOp1, Numeric nOp2){
+    public static ResultValue notEqual(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
         ResultValue res = new ResultValue(SubClassif.BOOLEAN, "");
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            String intResult = Utility.castInt(parser, resO2);
+            int intOp1 = Integer.parseInt(resO1.value);
+            int intOp2 = Integer.parseInt(intResult);
+            if (intOp1 != intOp2) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            String dResult = Utility.castFloat(parser, resO2);
+            double dOp1 = Double.parseDouble(resO1.value);
+            double dOp2 = Double.parseDouble(dResult);
+            if (dOp1 != dOp2) {
+                res.value = "T";
+            } else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.STRING)) {
+            int strComp = resO1.value.compareTo(resO2.value);
+            if(strComp != 0) {
+                res.value = "T";
+            }
+            else {
+                res.value = "F";
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN)){
+            parser.error("Cannot not perform compare on Boolean %s", resO1.value);
+        }
+        else {
+            parser.error("Uknown type: %s", resO1.type);
+        }
         return res;
     }
 

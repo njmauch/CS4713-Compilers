@@ -8,7 +8,7 @@ public class Numeric {
 
     public Numeric(Parser parser, ResultValue resO1, String operand, String operandNumber) throws Exception {
         if(resO1.value == null) {
-            System.err.printf(operandNumber + " of " + operand + " wasn't initialized\n");
+            System.err.print(operandNumber + " of " + operand + " wasn't initialized\n");
         }
         try {
             integerValue = Integer.parseInt(resO1.value);

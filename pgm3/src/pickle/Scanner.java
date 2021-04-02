@@ -127,6 +127,12 @@ public class Scanner {
         if (textCharM[iColPos] >= '0' && textCharM[iColPos] <= '9') {
             nextToken.iSourceLineNr = iSourceLineNr;
             createOperandToken(nextToken);
+            if(iColPos >= textCharM.length) {
+                nextToken.iSourceLineNr = iSourceLineNr;
+                iSourceLineNr++;
+                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                iColPos = 0;
+            }
             return;
         }
 
@@ -143,6 +149,12 @@ public class Scanner {
         if (textCharM[iBeginTokenPos] == '\'' || textCharM[iBeginTokenPos] == '\"') {
             nextToken.iSourceLineNr = iSourceLineNr;
             createStringToken(nextToken);
+            if(iColPos >= textCharM.length) {
+                nextToken.iSourceLineNr = iSourceLineNr;
+                iSourceLineNr++;
+                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                iColPos = 0;
+            }
             return;
         }
 
@@ -178,24 +190,55 @@ public class Scanner {
             if (entryResult instanceof SymbolTable.STControl) {
                 nextToken.subClassif = ((SymbolTable.STControl) entryResult).subClassif;
                 nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+                if(iColPos >= textCharM.length) {
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    iSourceLineNr++;
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    iColPos = 0;
+                }
                 return;
             } else if (entryResult instanceof SymbolTable.STFunction) {
                 nextToken.subClassif = ((SymbolTable.STFunction) entryResult).subClassif;
                 nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+                if(iColPos >= textCharM.length) {
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    iSourceLineNr++;
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    iColPos = 0;
+                }
                 return;
             } else if (entryResult instanceof SymbolTable.STIdentifier) {
                 nextToken.subClassif = ((SymbolTable.STIdentifier) entryResult).subClassif;
                 nextToken.tokenStr = new String(textCharM, iBeginTokenPos, iEndTokenPos - iBeginTokenPos);
+                if(iColPos >= textCharM.length) {
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    iSourceLineNr++;
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    iColPos = 0;
+                }
                 return;
             }
         } else if (separators.contains(nextToken.tokenStr)) {
             nextToken.primClassif = Classif.SEPARATOR;
             nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
             iColPos++;
+            if(iColPos >= textCharM.length) {
+                nextToken.iSourceLineNr = iSourceLineNr;
+                iSourceLineNr++;
+                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                iColPos = 0;
+            }
             return;
         }
         else {
             createOperandToken(nextToken);
+            if(iColPos >= textCharM.length) {
+                iColPos = 0;
+                nextToken.iSourceLineNr = iSourceLineNr;
+                iSourceLineNr++;
+                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                iColPos = 0;
+            }
             return;
         }
     }
@@ -210,6 +253,7 @@ public class Scanner {
     private void createStringToken(Token strToken) throws Exception {
         strToken.primClassif = Classif.OPERAND;
         strToken.subClassif = SubClassif.STRING;
+        strToken.iSourceLineNr = iSourceLineNr;
         char strTokenDelim = textCharM[iColPos];
         StringBuilder tempStr = new StringBuilder();
         iColPos++;

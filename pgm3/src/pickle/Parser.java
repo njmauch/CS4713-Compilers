@@ -107,6 +107,7 @@ public class Parser{
 
     private void print() throws Exception {
         scan.getNext();
+        ResultValue res = null;
         StringBuilder printStr = new StringBuilder();
         int parenCount = 0;
         if(! scan.currentToken.tokenStr.equals("(")) {
@@ -119,13 +120,18 @@ public class Parser{
             if(scan.nextToken.tokenStr.equals(";")) {
                 error("No closing paren found");
             }
+            if(scan.currentToken.tokenStr.equals(",")){
+                scan.getNext();
+            }
             if(scan.nextToken.tokenStr.equals(")")) {
                 parenCount--;
             }
             else if (scan.nextToken.tokenStr.equals("(")) {
                 parenCount++;
             }
-            printStr.append(scan.currentToken.tokenStr);
+            res = expr();
+            printStr.append(res.value);
+            printStr.append(" ");
             scan.getNext();
         }
         System.out.println(printStr.toString());
@@ -195,20 +201,12 @@ public class Parser{
 
         SubClassif dclType = SubClassif.EMPTY;
 
-        if(scan.currentToken.tokenStr.equals("Int")) {
-            dclType = SubClassif.INTEGER;
-        }
-        else if (scan.currentToken.tokenStr.equals("Float")) {
-            dclType = SubClassif.FLOAT;
-        }
-        else if (scan.currentToken.tokenStr.equals("String")) {
-            dclType = SubClassif.STRING;
-        }
-        else if (scan.currentToken.tokenStr.equals("Bool")) {
-            dclType = SubClassif.BOOLEAN;
-        }
-        else {
-            error("Unknown declare type %s", scan.currentToken.tokenStr);
+        switch (scan.currentToken.tokenStr) {
+            case "Int" -> dclType = SubClassif.INTEGER;
+            case "Float" -> dclType = SubClassif.FLOAT;
+            case "String" -> dclType = SubClassif.STRING;
+            case "Bool" -> dclType = SubClassif.BOOLEAN;
+            default -> error("Unknown declare type %s", scan.currentToken.tokenStr);
         }
         scan.getNext();
 
@@ -226,7 +224,7 @@ public class Parser{
             error("Expected ';' at end of statement");
         }
 
-        SymbolTable.STEntry stEntry = symbolTable.getSymbol(variableStr);
+        //SymbolTable.STEntry stEntry = symbolTable.getSymbol(variableStr);
 
         symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, Classif.OPERAND, SubClassif.IDENTIFIER, dclType,"primitive"));
 
@@ -236,8 +234,8 @@ public class Parser{
 
     public ResultValue assigmentStmt() throws Exception {
         ResultValue res = new ResultValue();
-        Numeric nOp2 = null;
-        Numeric nOp1 = null;
+        Numeric nOp2;
+        Numeric nOp1;
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
             error("Expected a variable for the target assignment %s", scan.currentToken.tokenStr);
         }
@@ -345,7 +343,6 @@ public class Parser{
             if (scan.currentToken.tokenStr.equals(">") || scan.currentToken.tokenStr.equals("<") || scan.currentToken.tokenStr.equals(">=") ||
                     scan.currentToken.tokenStr.equals("<=") || scan.currentToken.tokenStr.equals("==") || scan.currentToken.tokenStr.equals("!=") ||
                     scan.currentToken.tokenStr.equals("and") || scan.currentToken.tokenStr.equals("or") || scan.currentToken.tokenStr.equals("not")) {
-                res = evalCond();
                 return res;
             }
 
@@ -381,8 +378,6 @@ public class Parser{
         ResultValue resO2;
         ResultValue res = new ResultValue();
         String opStr;
-        Numeric nOp1;
-        Numeric nOp2;
 
         if(scan.currentToken.primClassif != Classif.OPERATOR) {
             resO1 = expr();
@@ -393,16 +388,13 @@ public class Parser{
         scan.getNext();
         resO2 = expr();
 
-        nOp1 = new Numeric(this, res, scan.currentToken.tokenStr, "1st operand");
-        nOp2 = new Numeric(this, resO2, scan.currentToken.tokenStr, "2nd Operand");
-
         switch (opStr) {
-            case ">" -> res = Utility.greaterThan(this, nOp1, nOp2);
-            case "<" -> res = Utility.lessThan(this, nOp1, nOp2);
-            case ">=" -> res = Utility.greaterThanOrEqual(this, nOp1, nOp2);
-            case "<=" -> res = Utility.lessThanOrEqual(this, nOp1, nOp2);
-            case "==" -> res = Utility.equal(this, nOp1, nOp2);
-            case "!=" -> res = Utility.notEqual(this, nOp1, nOp2);
+            case ">" -> res = Utility.greaterThan(this, resO1, resO2);
+            case "<" -> res = Utility.lessThan(this, resO1, resO2);
+            case ">=" -> res = Utility.greaterThanOrEqual(this, resO1, resO2);
+            case "<=" -> res = Utility.lessThanOrEqual(this, resO1, resO2);
+            case "==" -> res = Utility.equal(this, resO1, resO2);
+            case "!=" -> res = Utility.notEqual(this, resO1, resO2);
             default -> error("Bad compare token");
         }
         return res;
@@ -462,24 +454,21 @@ public class Parser{
 
 
     private ResultValue assign(String variableStr, ResultValue res) throws Exception {
-        switch(res.type) {
-            case INTEGER:
+        switch (res.type) {
+            case INTEGER -> {
                 res.value = Utility.castInt(this, res);
                 res.type = SubClassif.INTEGER;
-                break;
-            case FLOAT:
+            }
+            case FLOAT -> {
                 res.value = Utility.castFloat(this, res);
                 res.type = SubClassif.FLOAT;
-                break;
-            case BOOLEAN:
+            }
+            case BOOLEAN -> {
                 res.value = Utility.castBoolean(this, res);
                 res.type = SubClassif.BOOLEAN;
-                break;
-            case STRING:
-                res.type = SubClassif.STRING;
-                break;
-            default:
-                error("Assign type is incompatible");
+            }
+            case STRING -> res.type = SubClassif.STRING;
+            default -> error("Assign type is incompatible");
         }
         smStorage.insertValue(variableStr, res);
 
