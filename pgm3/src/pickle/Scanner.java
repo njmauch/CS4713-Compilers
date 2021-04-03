@@ -244,9 +244,11 @@ public class Scanner {
     }
 
     public void setPosition(Token token) throws Exception {
-        iSourceLineNr = token.iSourceLineNr;
+        this.iSourceLineNr = token.iSourceLineNr;
         this.iColPos = token.iColPos;
         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+        currentToken = new Token();
+        nextToken = new Token();
         this.getNext();
         this.getNext();
     }

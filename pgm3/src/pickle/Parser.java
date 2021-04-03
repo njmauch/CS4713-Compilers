@@ -59,27 +59,27 @@ public class Parser{
 
     private ResultValue statements (boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
-
         scan.getNext();
-        while (! scan.getNext().isEmpty()){
-            //scan.getNext();
+        while (true){
+            scan.getNext();
             if (scan.currentToken.primClassif == Classif.EOF){
+                res.terminatingStr = "";
                 return res;
             }
-            //Assign Value;
-            if (scan.currentToken.primClassif == Classif.OPERAND){
-                assigmentStmt(bExec);
-            }
-            else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.END)){
+            if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.END)){
                 res.type = SubClassif.END;
                 res.terminatingStr = scan.currentToken.tokenStr;
                 return res;
+            }
+            else if ((scan.currentToken.primClassif == Classif.OPERAND) && (scan.currentToken.subClassif.equals(SubClassif.IDENTIFIER))) {
+                assigmentStmt(bExec);
             }
             else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.DECLARE)){
                 declareStmt(bExec);
             }
             else if (scan.currentToken.primClassif == Classif.CONTROL) {
                 controlStmt(bExec);
+                //return res;
             }
             else if (scan.currentToken.primClassif == Classif.FUNCTION){
                 functionStmt(bExec);
@@ -91,7 +91,6 @@ public class Parser{
                 error("Invalid token");
             }
         }
-        return res;
     }
 
     private void functionStmt (boolean bExec) throws Exception {
@@ -151,10 +150,10 @@ public class Parser{
             }
             if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.FLOW)) {
                 if (scan.currentToken.tokenStr.equals("if")) {
-                    ifStmt(bExec);
+                    res = ifStmt(true);
                     break;
                 } else if (scan.currentToken.tokenStr.equals("while")) {
-                    whileStmt(bExec);
+                    res = whileStmt(true);
                     break;
                 }
             }
@@ -163,41 +162,41 @@ public class Parser{
         return res;
     }
 
-    public void whileStmt(boolean bExec) throws Exception {
+    private ResultValue whileStmt(boolean bExec) throws Exception {
         ResultValue res;
         Token tempToken;
 
         tempToken = scan.currentToken;
         if (bExec) {
-            ResultValue res01 = evalCond();
-            //scan.getNext();
-            if (!scan.nextToken.tokenStr.equals(":")) {
-                error("Expected ':' after while");
-            }
-            if (res01.type != SubClassif.BOOLEAN) {
-                error("Expected boolean");
-            }
-            while (res01.value.equals("T")) {
+            ResultValue resCond = evalCond();
+            while(resCond.value.equals("T")) {
                 res = statements(true);
-                if (!res.terminatingStr.equals("endwhile")) {
-                    error("No endwhile found");
+                if(! res.terminatingStr.equals("endwhile")){
+                    error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
                 }
-                if (!scan.getNext().equals(";")) {
-                    error("Expected ';' after endwhile");
-                }
+                skipTo("endwhile");
                 scan.setPosition(tempToken);
-                res01 = evalCond();
+                resCond = evalCond();
             }
-        } else {
+            res = statements(false);
+            if(! res.terminatingStr.equals("endwhile")) {
+                error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
+            }
+            if(! scan.getNext().equals(";")) {
+                error("Expected ; after endwhile");
+            }
+        }
+        else {
             skipTo(":");
             res = statements(false);
+            if(! res.terminatingStr.equals("endwhile")) {
+                error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
+            }
+            if(! scan.getNext().equals(";")) {
+                error("Expected ; after endwhile");
+            }
         }
-        if (!scan.currentToken.tokenStr.equals("endwhile")) {
-            error("Expected endwhile");
-        }
-        if (!scan.currentToken.tokenStr.equals(";")) {
-            error("Expected ';' after endwhile ");
-        }
+        return res;
     }
 
     private ResultValue declareStmt(boolean bExec) throws Exception {
@@ -288,9 +287,6 @@ public class Parser{
 
         while (true) {
             if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
-                //if (! scan.currentToken.tokenStr.equals("-")) {
-                    //break;
-                //}
                 if (scan.currentToken.primClassif != Classif.OPERAND && ! scan.currentToken.tokenStr.equals("-")) {
                     error("Expected operand %s", scan.currentToken.tokenStr);
                 }
@@ -404,7 +400,7 @@ public class Parser{
         return res;
     }
 
-    void ifStmt(Boolean bExec) throws Exception {
+    private ResultValue ifStmt(Boolean bExec) throws Exception {
         int saveLineNr = scan.currentToken.iSourceLineNr;
         ResultValue resCond;
         ResultValue resTemp;
@@ -432,6 +428,7 @@ public class Parser{
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
+                    //skipTo("endif");
                     resTemp = statements(true);
                 }
                 if (!resTemp.terminatingStr.equals("endif")) {
@@ -458,6 +455,7 @@ public class Parser{
                 error("expected a ‘;’after ‘endif’");
             }
         }
+        return resTemp;
     }
 
 

@@ -1,0 +1,36 @@
+p3Input.txt 
+>>> Checking datatype results based on left operand 
+	1. area all float 
+	radius= 8 radius2= 64 area= 200.96 
+	2. area using int radius as left operand 
+	radius= 8 irad2= 64 area= 192 
+	3. circumference using twoPi as float * int 
+	radius= 8 twoPi= 6.28 circum= 50.24 
+	4. circumference using twoPi as int * float 
+	radius= 8 twoPi= 6 circum= 48 
+>> Minus test, A= 10 B= 6 D= 25 
+D-A= 15 
+-A= -10 
+-D= -25 
+A=-B = -6 
+>>> First If 
+	loc is TX 
+	Done with first if 
+>>> Second If 
+	2nd if false, i >= 5, i = 1 
+>>> First while i < 5 
+	top of while, i= 1 
+	while first if true i<3, i= 1 
+		while inner if false, loc!='TX', loc is TX 
+Line 97 Invalid token, File: p3Input.txt
+	at pickle.Parser.error(Parser.java:57)
+	at pickle.Parser.statements(Parser.java:92)
+	at pickle.Parser.ifStmt(Parser.java:417)
+	at pickle.Parser.controlStmt(Parser.java:156)
+	at pickle.Parser.statements(Parser.java:82)
+	at pickle.Parser.whileStmt(Parser.java:175)
+	at pickle.Parser.controlStmt(Parser.java:159)
+	at pickle.Parser.getNext(Parser.java:40)
+	at pickle.Pickle.main(Pickle.java:30)
+
+Process finished with exit code 0
