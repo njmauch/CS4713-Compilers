@@ -50,12 +50,13 @@ public class Scanner {
     public String getNext() throws Exception {
 
         currentToken = nextToken;
-        getNextToken();
 
         if(bShowToken) {
             System.out.println("...");
             currentToken.printToken();
         }
+
+        getNextToken();
 
         return currentToken.tokenStr;
     }
@@ -65,38 +66,45 @@ public class Scanner {
         int iEndTokenPos;
         nextToken = new Token();
 
+        if ((iSourceLineNr + 1) > sourceLineM.size()) {
+            nextToken.tokenStr = "";
+            nextToken.primClassif = Classif.EOF;
+            nextToken.iSourceLineNr = iSourceLineNr;
+            return;
+        }
         //If new line print out the line
         if (iColPos == 0) {
             //If the current line is empty (whitespace), print out lines until it reaches non empty line
             if (sourceLineM.get(iSourceLineNr).isEmpty()) {
-                while (sourceLineM.get(iSourceLineNr).isEmpty()) {
-                    //System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
-                    iSourceLineNr++;
-                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
-                    iColPos = 0;
-                    getNextToken();
-                    return;
-                }
+                //System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
+                iSourceLineNr++;
+                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                iColPos = 0;
+                getNextToken();
+                return;
             }
             //Prints out line with tokens
             //System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
         }
 
+
         while (true) {
             if (iColPos + 1 >= textCharM.length) {
-                iSourceLineNr++;
-                if (iSourceLineNr >= sourceLineM.size()) {
+                if (separators.indexOf(textCharM[iColPos]) > -1) {
+                    iSourceLineNr++;
+                    nextToken.primClassif = Classif.SEPARATOR;
+                    nextToken.tokenStr = new String(textCharM, iColPos, 1);
+                    nextToken.iSourceLineNr = iSourceLineNr;
+                    if (iSourceLineNr < sourceLineM.size()) {
+                        textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    }
+                    iColPos = 0;
+                    return;
+                }
+                else if (++iSourceLineNr >= sourceLineM.size()) {
                     nextToken.tokenStr = "";
                     nextToken.primClassif = Classif.EOF;
                     nextToken.iSourceLineNr = iSourceLineNr;
-                    return;
-                }
-                else if (separators.indexOf(textCharM[iColPos]) > -1) {
-                    nextToken.primClassif = Classif.SEPARATOR;
-                    nextToken.tokenStr = new String(textCharM, iColPos, 1);
-                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
-                    nextToken.iSourceLineNr = iSourceLineNr;
-                    iColPos = 0;
                     return;
                 }
                 else {
@@ -105,7 +113,6 @@ public class Scanner {
                     getNextToken();
                     return;
                 }
-
             } else {
                 if ((whiteSpace.indexOf(textCharM[iColPos]) > -1) && iColPos < textCharM.length) {
                     iColPos++;
@@ -221,9 +228,9 @@ public class Scanner {
         } else if (separators.contains(nextToken.tokenStr)) {
             nextToken.primClassif = Classif.SEPARATOR;
             nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
+            nextToken.iSourceLineNr = iSourceLineNr;
             iColPos++;
             if(iColPos >= textCharM.length) {
-                nextToken.iSourceLineNr = iSourceLineNr;
                 iSourceLineNr++;
                 textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
                 iColPos = 0;

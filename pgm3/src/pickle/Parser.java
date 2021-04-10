@@ -25,7 +25,7 @@ public class Parser{
 
     public void getNext() throws Exception {
         while (! scan.getNext().isEmpty()) {
-            if (scan.currentToken.primClassif == Classif.EOF) {
+            if (scan.nextToken.primClassif == Classif.EOF) {
                 return;
             }
             if (scan.currentToken.primClassif.equals(Classif.OPERAND)) {
@@ -62,7 +62,7 @@ public class Parser{
         scan.getNext();
         while (true){
             scan.getNext();
-            if (scan.currentToken.primClassif == Classif.EOF){
+            if (scan.nextToken.primClassif == Classif.EOF){
                 res.terminatingStr = "";
                 return res;
             }
@@ -78,8 +78,8 @@ public class Parser{
                 declareStmt(bExec);
             }
             else if (scan.currentToken.primClassif == Classif.CONTROL) {
-                controlStmt(bExec);
-                //return res;
+                res = controlStmt(bExec);
+                return res;
             }
             else if (scan.currentToken.primClassif == Classif.FUNCTION){
                 functionStmt(bExec);
@@ -158,7 +158,7 @@ public class Parser{
                 }
             }
         }
-        res.terminatingStr = scan.nextToken.tokenStr;
+        res.terminatingStr = scan.currentToken.tokenStr;
         return res;
     }
 
@@ -412,7 +412,7 @@ public class Parser{
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
-                    skipTo("endif");
+                    //skipTo("endif");
                     resTemp = statements(false);
                 }
                 if (!resTemp.terminatingStr.equals("endif")) {
