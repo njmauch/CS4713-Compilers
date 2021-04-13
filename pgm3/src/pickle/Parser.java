@@ -28,6 +28,9 @@ public class Parser{
             if (scan.nextToken.primClassif == Classif.EOF) {
                 return;
             }
+            if(scan.currentToken.primClassif == Classif.SEPARATOR) {
+                scan.getNext();
+            }
             if (scan.currentToken.primClassif.equals(Classif.OPERAND)) {
                 assigmentStmt(true);
             }
@@ -151,6 +154,7 @@ public class Parser{
             if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.FLOW)) {
                 if (scan.currentToken.tokenStr.equals("if")) {
                     res = ifStmt(true);
+                    //skipTo(";");
                     break;
                 } else if (scan.currentToken.tokenStr.equals("while")) {
                     res = whileStmt(true);
@@ -171,18 +175,19 @@ public class Parser{
             ResultValue resCond = evalCond();
             while(resCond.value.equals("T")) {
                 res = statements(true);
-                if(! res.terminatingStr.equals("endwhile")){
-                    error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
-                }
-                skipTo("endwhile");
+                //if(! res.terminatingStr.equals("endwhile")){
+                    //error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
+                //}
+                //skipTo("endwhile");
                 scan.setPosition(tempToken);
+                //scan.getNext();
                 resCond = evalCond();
             }
             res = statements(false);
             if(! res.terminatingStr.equals("endwhile")) {
                 error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
             }
-            if(! scan.getNext().equals(";")) {
+            if(! scan.nextToken.tokenStr.equals(";")) {
                 error("Expected ; after endwhile");
             }
         }
@@ -192,7 +197,7 @@ public class Parser{
             if(! res.terminatingStr.equals("endwhile")) {
                 error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
             }
-            if(! scan.getNext().equals(";")) {
+            if(! scan.nextToken.tokenStr.equals(";")) {
                 error("Expected ; after endwhile");
             }
         }
@@ -412,13 +417,13 @@ public class Parser{
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
-                    //skipTo("endif");
+                    skipTo("endif");
                     resTemp = statements(false);
                 }
                 if (!resTemp.terminatingStr.equals("endif")) {
                     error("expected a ‘endif’ for an ‘if’");
                 }
-                if (!scan.getNext().equals(";")) {
+                if (!scan.nextToken.tokenStr.equals(";")) {
                     error("expected a ‘;’after ‘endif’");
                 }
             } else {
@@ -434,7 +439,7 @@ public class Parser{
                 if (!resTemp.terminatingStr.equals("endif")) {
                     error("expected a ‘endif’ for an ‘if’");
                 }
-                if (!scan.getNext().equals(";")) {
+                if (!scan.nextToken.tokenStr.equals(";")) {
                     error("expected a ‘;’after ‘endif’");
                 }
             }
@@ -443,7 +448,7 @@ public class Parser{
             skipTo(":");
             resTemp = statements(false);
             if (resTemp.terminatingStr.equals("else")) {
-                if (!scan.getNext().equals(":")) {
+                if (!scan.nextToken.tokenStr.equals(":")) {
                     error("expected a ‘:’after ‘else’");
                 }
                 resTemp = statements(false);
@@ -451,10 +456,11 @@ public class Parser{
             if(!resTemp.terminatingStr.equals("endif")) {
                 error("expected a ‘endif’ for an ‘if’");
             }
-            if (!scan.getNext().equals(";")) {
+            if (!scan.nextToken.tokenStr.equals(";")) {
                 error("expected a ‘;’after ‘endif’");
             }
         }
+        //skipTo(";");
         return resTemp;
     }
 
