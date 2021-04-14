@@ -175,12 +175,13 @@ public class Parser{
             ResultValue resCond = evalCond();
             while(resCond.value.equals("T")) {
                 res = statements(true);
-                //if(! res.terminatingStr.equals("endwhile")){
-                    //error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
-                //}
-                //skipTo("endwhile");
+                res.terminatingStr = "endwhile";
+                if(! res.terminatingStr.equals("endwhile")){
+                    error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
+                }
+                skipTo("endwhile");
                 scan.setPosition(tempToken);
-                //scan.getNext();
+                scan.getNext();
                 resCond = evalCond();
             }
             res = statements(false);
