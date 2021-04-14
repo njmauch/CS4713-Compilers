@@ -1,5 +1,8 @@
 package pickle;
 
+
+import java.lang.reflect.Array;
+
 public class Utility {
 
     public static ResultValue addition(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
@@ -398,5 +401,55 @@ public class Utility {
             parser.error("Unable to convert to boolean: %s", res.value);
         }
         return null;
+    }
+
+    public static ResultValue LENGTH(String str) {
+        ResultValue res;
+        if(str == null) {
+            res = new ResultValue(SubClassif.INTEGER, "0", "LENGTH");
+        }
+        else {
+            res = new ResultValue(SubClassif.INTEGER, String.valueOf(str.length()), "LENGTH");
+        }
+        return res;
+    }
+
+    public static ResultValue SPACES(String str) {
+        ResultValue res = null;
+        int i;
+        if(str == null) {
+            res = new ResultValue(SubClassif.BOOLEAN, "T", "SPACES");
+        }
+        else {
+            char charArray[] = str.toCharArray();
+            res = new ResultValue(SubClassif.BOOLEAN, "F", "SPACES");
+            for (i = 0; i < charArray.length; i++) {
+                if (charArray[i] != ' ') {
+                    return res;
+                }
+            }
+            res.value = "T";
+        }
+        return res;
+    }
+
+    public static ResultValue ELEM(Parser parser, ResultArray array) throws Exception {
+        if (array.structure != ArrayStructure.FIXED_ARRAY) {
+            parser.error("Invalid argument to ELEM()");
+        }
+        if (array == null) {
+            return new ResultValue(SubClassif.INTEGER, "0", "ELEM");
+        }
+
+        if(array.lastPopulated == 0)
+            return new ResultValue(SubClassif.INTEGER, String.valueOf(array.lastPopulated), "ELEM");
+        else
+            return new ResultValue(SubClassif.INTEGER, String.valueOf((array.lastPopulated + 1)), "ELEM");
+    }
+
+    public static ResultValue MAXELEM(ResultArray array) {
+        ResultValue res = null;
+        res = new ResultValue(SubClassif.INTEGER, String.valueOf(array.declaredSize), "MAXELEM");
+        return res;
     }
 }
