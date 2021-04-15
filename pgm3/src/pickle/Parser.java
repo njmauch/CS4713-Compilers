@@ -23,33 +23,6 @@ public class Parser{
         this.bShowStmt = false;
     }
 
-    public void getNext() throws Exception {
-        while (! scan.getNext().isEmpty()) {
-            if (scan.nextToken.primClassif == Classif.EOF) {
-                return;
-            }
-            if(scan.currentToken.primClassif == Classif.SEPARATOR) {
-                scan.getNext();
-            }
-            if (scan.currentToken.primClassif.equals(Classif.OPERAND)) {
-                assigmentStmt(true);
-            }
-            else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.DECLARE)){
-                declareStmt(true);
-            }
-            else if (scan.currentToken.primClassif.equals(Classif.FUNCTION)) {
-                functionStmt(true);
-            } else if (scan.currentToken.primClassif.equals(Classif.CONTROL)) {
-                controlStmt(true);
-            } else if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
-                error("Can't start with operator", scan.currentToken);
-            }
-            else {
-                error("Unknown token %s", scan.currentToken.tokenStr);
-            }
-        }
-    }
-
     private void skipTo(String tokenStr) throws Exception {
         while(!scan.getNext().equals(tokenStr));
     }
@@ -60,54 +33,61 @@ public class Parser{
         throw new ParserException(Scanner.iSourceLineNr, diagnosticTxt, this.sourceFileNm);
     }
 
-    private ResultValue statements (boolean bExec) throws Exception {
-        ResultValue res = new ResultValue();
+    public ResultValue statement (boolean bExec) throws Exception {
         scan.getNext();
-        while (true){
-            scan.getNext();
-            if (scan.nextToken.primClassif == Classif.EOF){
-                res.terminatingStr = "";
-                return res;
+
+        if(scan.currentToken.primClassif.equals(Classif.EOF)) {
+            return new ResultValue(SubClassif.VOID, "", "", "");
+        }
+        else if(scan.currentToken.primClassif.equals(Classif.CONTROL)) {
+            if(scan.currentToken.subClassif.equals(SubClassif.DECLARE)) {
+                return declareStmt(bExec);
             }
-            if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.END)){
-                res.type = SubClassif.END;
-                res.terminatingStr = scan.currentToken.tokenStr;
-                return res;
+            else if(scan.currentToken.subClassif.equals(SubClassif.FLOW)) {
+                if (scan.currentToken.tokenStr.equals("if")) {
+                    return ifStmt(bExec);
+                } else if (scan.currentToken.tokenStr.equals("while")) {
+                    return whileStmt(bExec);
+                }
             }
-            else if ((scan.currentToken.primClassif == Classif.OPERAND) && (scan.currentToken.subClassif.equals(SubClassif.IDENTIFIER))) {
-                assigmentStmt(bExec);
-            }
-            else if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.DECLARE)){
-                declareStmt(bExec);
-            }
-            else if (scan.currentToken.primClassif == Classif.CONTROL) {
-                res = controlStmt(bExec);
-                return res;
-            }
-            else if (scan.currentToken.primClassif == Classif.FUNCTION){
-                functionStmt(bExec);
-            }
-            else if (scan.currentToken.primClassif == Classif.OPERATOR) {
-                error("Can't start with operator");
+            else if(scan.currentToken.subClassif.equals(SubClassif.END)) {
+                return new ResultValue(SubClassif.END, "", "primitive", scan.currentToken.tokenStr);
             }
             else {
-                error("Invalid token");
+                error("Invalid control variable %s", scan.currentToken.tokenStr);
             }
         }
+        else if(scan.currentToken.primClassif.equals(Classif.OPERAND)) {
+            return assignmentStmt(bExec);
+        }
+        else if(scan.currentToken.primClassif.equals(Classif.FUNCTION)) {
+            return functionStmt(bExec);
+        }
+        return new ResultValue(SubClassif.VOID, "", "", scan.currentToken.tokenStr);
     }
 
-    private void functionStmt (boolean bExec) throws Exception {
+    public ResultValue statements(Boolean bExec, String termStr) throws Exception {
+        ResultValue res = statement(bExec);
+        while(! termStr.contains(res.terminatingStr)) {
+            res = statement(bExec);
+        }
+        return res;
+    }
+
+    private ResultValue functionStmt (boolean bExec) throws Exception {
+        ResultValue res = null;
         if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
             if(scan.currentToken.tokenStr.equals("print")) {
-                print();
+                res = print();
             }
             else {
                 error("No function found with name %s", scan.currentToken.tokenStr);
             }
         }
+        return res;
     }
 
-    private void print() throws Exception {
+    private ResultValue print() throws Exception {
         scan.getNext();
         ResultValue res = null;
         StringBuilder printStr = new StringBuilder();
@@ -141,29 +121,7 @@ public class Parser{
         }
         System.out.println(printStr.toString());
         scan.getNext();
-    }
-
-    public ResultValue controlStmt(boolean bExec) throws Exception {
-        ResultValue res = new ResultValue();
-        while (true) {
-            //scan.getNext();
-
-            if (scan.currentToken.primClassif == Classif.EOF) {
-                return res;
-            }
-            if ((scan.currentToken.primClassif == Classif.CONTROL) && (scan.currentToken.subClassif == SubClassif.FLOW)) {
-                if (scan.currentToken.tokenStr.equals("if")) {
-                    res = ifStmt(true);
-                    //skipTo(";");
-                    break;
-                } else if (scan.currentToken.tokenStr.equals("while")) {
-                    res = whileStmt(true);
-                    break;
-                }
-            }
-        }
-        res.terminatingStr = scan.currentToken.tokenStr;
-        return res;
+        return new ResultValue(SubClassif.BUILTIN, "", "primitive", scan.currentToken.tokenStr);
     }
 
     private ResultValue whileStmt(boolean bExec) throws Exception {
@@ -174,7 +132,7 @@ public class Parser{
         if (bExec) {
             ResultValue resCond = evalCond();
             while(resCond.value.equals("T")) {
-                res = statements(true);
+                res = statements(true, "endwhile");
                 res.terminatingStr = "endwhile";
                 if(! res.terminatingStr.equals("endwhile")){
                     error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
@@ -184,7 +142,7 @@ public class Parser{
                 scan.getNext();
                 resCond = evalCond();
             }
-            res = statements(false);
+            res = statements(false, "endwhile");
             if(! res.terminatingStr.equals("endwhile")) {
                 error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
             }
@@ -194,7 +152,7 @@ public class Parser{
         }
         else {
             skipTo(":");
-            res = statements(false);
+            res = statements(false, "endwhile");
             if(! res.terminatingStr.equals("endwhile")) {
                 error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
             }
@@ -241,7 +199,7 @@ public class Parser{
 
     }
 
-    public ResultValue assigmentStmt(boolean bExec) throws Exception {
+    public ResultValue assignmentStmt(boolean bExec) throws Exception {
         ResultValue res = new ResultValue();
         Numeric nOp2;
         Numeric nOp1;
@@ -413,56 +371,55 @@ public class Parser{
         if (bExec) {
             resCond = evalCond();
             if (resCond.value.equals("T")) {
-                resTemp = statements(true);
+                resTemp = statements(true, "endif else");
                 if (resTemp.terminatingStr.equals("else")) {
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
-                    skipTo("endif");
-                    resTemp = statements(false);
+                    resTemp = statements(false, "endif");
                 }
                 if (!resTemp.terminatingStr.equals("endif")) {
                     error("expected a ‘endif’ for an ‘if’");
                 }
-                if (!scan.nextToken.tokenStr.equals(";")) {
+                if (!scan.getNext().equals(";")) {
                     error("expected a ‘;’after ‘endif’");
                 }
             } else {
                 skipTo("else");
-                resTemp = statements(false);
+                resTemp = statements(false, "endif else");
                 if (resTemp.terminatingStr.equals("else")) {
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
                     }
                     //skipTo("endif");
-                    resTemp = statements(true);
+                    resTemp = statements(true, "endif");
                 }
                 if (!resTemp.terminatingStr.equals("endif")) {
                     error("expected a ‘endif’ for an ‘if’");
                 }
-                if (!scan.nextToken.tokenStr.equals(";")) {
+                if (!scan.getNext().equals(";")) {
                     error("expected a ‘;’after ‘endif’");
                 }
+                resCond = statements(false, "endif");
             }
         }
         else {
             skipTo(":");
-            resTemp = statements(false);
+            resTemp = statements(false, "endif else");
             if (resTemp.terminatingStr.equals("else")) {
                 if (!scan.nextToken.tokenStr.equals(":")) {
                     error("expected a ‘:’after ‘else’");
                 }
-                resTemp = statements(false);
+                resTemp = statements(false, "endif");
             }
             if(!resTemp.terminatingStr.equals("endif")) {
                 error("expected a ‘endif’ for an ‘if’");
             }
-            if (!scan.nextToken.tokenStr.equals(";")) {
+            if (!scan.getNext().equals(";")) {
                 error("expected a ‘;’after ‘endif’");
             }
         }
-        //skipTo(";");
-        return resTemp;
+        return new ResultValue(SubClassif.VOID, "", "primitive", resTemp.terminatingStr);
     }
 
 

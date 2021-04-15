@@ -20,14 +20,19 @@ package pickle;
 public class Pickle
 {
     public static void main(String[] args) throws Exception     {
-        // Create the SymbolTable
         SymbolTable symbolTable = new SymbolTable();
         StorageManager storeManager = new StorageManager();
-        Scanner scan = new Scanner(args[0], symbolTable);
-        try
-        {
+        try {
+
+            Scanner scan = new Scanner(args[0], symbolTable);
             Parser parser = new Parser(scan, storeManager, symbolTable);
-            parser.getNext();
+            ResultValue res;
+            while (scan.currentToken.primClassif != Classif.EOF) {
+                res = parser.statement(true);
+                if(res.type.equals(SubClassif.END)) {
+                    parser.error("Invalid token %s", res.terminatingStr);
+                }
+            }
         }
         catch (Exception e)
         {
