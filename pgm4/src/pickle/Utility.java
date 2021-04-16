@@ -10,11 +10,11 @@ public class Utility {
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue + nOp2.integerValue;
-            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
         else if(nOp1.type == SubClassif.FLOAT) {
             double dResult = nOp1.doubleValue + nOp2.doubleValue;
-            resValue = new ResultValue( nOp1.type, Double.toString(dResult), "primitive");
+            resValue = new ResultValue( nOp1.type, Double.toString(dResult), Structure.PRIMITIVE);
         }
         else{
             parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
@@ -27,11 +27,11 @@ public class Utility {
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue - nOp2.integerValue;
-            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
         else if(nOp1.type == SubClassif.FLOAT) {
             double dResult = nOp1.doubleValue - nOp2.doubleValue;
-            resValue = new ResultValue(nOp1.type, Double.toString(dResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Double.toString(dResult), Structure.PRIMITIVE);
         }
         else{
             parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
@@ -44,11 +44,11 @@ public class Utility {
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue * nOp2.integerValue;
-            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
         else if(nOp1.type == SubClassif.FLOAT) {
             double dResult = nOp1.doubleValue * nOp2.doubleValue;
-            resValue = new ResultValue(nOp1.type,Double.toString(dResult),  "primitive");
+            resValue = new ResultValue(nOp1.type,Double.toString(dResult),  Structure.PRIMITIVE);
         }
         else{
             parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
@@ -61,11 +61,11 @@ public class Utility {
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue / nOp2.integerValue;
-            resValue = new ResultValue( nOp1.type, Integer.toString(intResult), "primitive");
+            resValue = new ResultValue( nOp1.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
         else if(nOp1.type == SubClassif.FLOAT) {
             double dResult = nOp1.doubleValue / nOp2.doubleValue;
-            resValue = new ResultValue(nOp1.type, Double.toString(dResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Double.toString(dResult), Structure.PRIMITIVE);
         }
         else{
             parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
@@ -78,11 +78,11 @@ public class Utility {
 
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = (int) Math.pow(nOp1.integerValue, nOp2.integerValue);
-            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
         else if(nOp1.type == SubClassif.FLOAT) {
             double dResult = Math.pow(nOp1.doubleValue, nOp2.doubleValue);
-            resValue = new ResultValue(nOp1.type, Double.toString(dResult), "primitive");
+            resValue = new ResultValue(nOp1.type, Double.toString(dResult), Structure.PRIMITIVE);
         }
         else{
             parser.error(nOp1.strValue + " / " + nOp2.strValue + " are not numeric");
@@ -95,11 +95,11 @@ public class Utility {
 
         if(nOp.type == SubClassif.INTEGER) {
             int intResult = -nOp.integerValue;
-            resValue = new ResultValue(nOp.type, Integer.toString(intResult), "primitive");
+            resValue = new ResultValue(nOp.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
         else if(nOp.type == SubClassif.FLOAT) {
             double dResult = -nOp.doubleValue;
-            resValue = new ResultValue(nOp.type, Double.toString(dResult), "primitive");
+            resValue = new ResultValue(nOp.type, Double.toString(dResult), Structure.PRIMITIVE);
         }
         else {
             parser.error(nOp.strValue + " is not numeric");
@@ -406,10 +406,10 @@ public class Utility {
     public static ResultValue LENGTH(String str) {
         ResultValue res;
         if(str == null) {
-            res = new ResultValue(SubClassif.INTEGER, "0", "LENGTH");
+            res = new ResultValue(SubClassif.INTEGER, "0", Structure.PRIMITIVE);
         }
         else {
-            res = new ResultValue(SubClassif.INTEGER, String.valueOf(str.length()), "LENGTH");
+            res = new ResultValue(SubClassif.INTEGER, String.valueOf(str.length()), Structure.PRIMITIVE);
         }
         return res;
     }
@@ -418,11 +418,11 @@ public class Utility {
         ResultValue res = null;
         int i;
         if(str == null) {
-            res = new ResultValue(SubClassif.BOOLEAN, "T", "SPACES");
+            res = new ResultValue(SubClassif.BOOLEAN, "T", Structure.PRIMITIVE);
         }
         else {
             char charArray[] = str.toCharArray();
-            res = new ResultValue(SubClassif.BOOLEAN, "F", "SPACES");
+            res = new ResultValue(SubClassif.BOOLEAN, "F", Structure.PRIMITIVE);
             for (i = 0; i < charArray.length; i++) {
                 if (charArray[i] != ' ') {
                     return res;
@@ -434,22 +434,22 @@ public class Utility {
     }
 
     public static ResultValue ELEM(Parser parser, ResultArray array) throws Exception {
-        if (array.structure != ArrayStructure.FIXED_ARRAY) {
+        if (array.structure != Structure.FIXED_ARRAY) {
             parser.error("Invalid argument to ELEM()");
         }
         if (array == null) {
-            return new ResultValue(SubClassif.INTEGER, "0", "ELEM");
+            return new ResultValue(SubClassif.INTEGER, "0", Structure.PRIMITIVE);
         }
 
         if(array.lastPopulated == 0)
-            return new ResultValue(SubClassif.INTEGER, String.valueOf(array.lastPopulated), "ELEM");
+            return new ResultValue(SubClassif.INTEGER, String.valueOf(array.lastPopulated), Structure.PRIMITIVE);
         else
-            return new ResultValue(SubClassif.INTEGER, String.valueOf((array.lastPopulated + 1)), "ELEM");
+            return new ResultValue(SubClassif.INTEGER, String.valueOf((array.lastPopulated + 1)), Structure.PRIMITIVE);
     }
 
     public static ResultValue MAXELEM(ResultArray array) {
         ResultValue res = null;
-        res = new ResultValue(SubClassif.INTEGER, String.valueOf(array.declaredSize), "MAXELEM");
+        res = new ResultValue(SubClassif.INTEGER, String.valueOf(array.declaredSize), Structure.PRIMITIVE);
         return res;
     }
 }

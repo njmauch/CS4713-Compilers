@@ -1,6 +1,9 @@
 package pickle;
 
 
+import java.util.ArrayList;
+import java.util.regex.Pattern;
+
 public class Parser{
     public Scanner scan;
     public SymbolTable symbolTable;
@@ -38,7 +41,7 @@ public class Parser{
         scan.getNext();
 
         if(scan.currentToken.primClassif.equals(Classif.EOF)) {
-            return new ResultValue(SubClassif.VOID, "", "", "");
+            return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, "");
         }
         else if(scan.currentToken.primClassif.equals(Classif.CONTROL)) {
             if(scan.currentToken.subClassif.equals(SubClassif.DECLARE)) {
@@ -52,7 +55,7 @@ public class Parser{
                 }
             }
             else if(scan.currentToken.subClassif.equals(SubClassif.END)) {
-                return new ResultValue(SubClassif.END, "", "primitive", scan.currentToken.tokenStr);
+                return new ResultValue(SubClassif.END, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
             }
             else {
                 error("Invalid control variable %s", scan.currentToken.tokenStr);
@@ -64,7 +67,7 @@ public class Parser{
         else if(scan.currentToken.primClassif.equals(Classif.FUNCTION)) {
             return functionStmt(bExec);
         }
-        return new ResultValue(SubClassif.VOID, "", "", scan.currentToken.tokenStr);
+        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
     public ResultValue statements(Boolean bExec, String termStr) throws Exception {
@@ -80,10 +83,22 @@ public class Parser{
         if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
             if(!bExec) {
                 skipTo(";");
-                res = new ResultValue(SubClassif.BUILTIN, "", "primitive", scan.currentToken.tokenStr);
+                res = new ResultValue(SubClassif.BUILTIN, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
             }
             else if(scan.currentToken.tokenStr.equals("print")) {
                 res = print();
+            }
+            else if(scan.currentToken.tokenStr.equals("LENGTH")) {
+                res = Utility.LENGTH(scan.currentToken.tokenStr);
+            }
+            else if(scan.currentToken.tokenStr.equals("SPACES")) {
+                res = Utility.SPACES(scan.currentToken.tokenStr);
+            }
+            else if(scan.currentToken.tokenStr.equals("ELEM")) {
+                res = Utility.ELEM(this, (ResultArray)smStorage.getValue(scan.currentToken.tokenStr));
+            }
+            else if(scan.currentToken.tokenStr.equals("MAXELEM")) {
+                res = Utility.MAXELEM((ResultArray)smStorage.getValue(scan.currentToken.tokenStr));
             }
             else {
                 error("No function found with name %s", scan.currentToken.tokenStr);
@@ -126,7 +141,7 @@ public class Parser{
         }
         System.out.println(printStr.toString());
         scan.getNext();
-        return new ResultValue(SubClassif.BUILTIN, "", "primitive", scan.currentToken.tokenStr);
+        return new ResultValue(SubClassif.BUILTIN, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
     private ResultValue whileStmt(boolean bExec) throws Exception {
@@ -157,7 +172,7 @@ public class Parser{
         if(! scan.nextToken.tokenStr.equals(";")) {
             error("Expected ; after endwhile");
         }
-        return new ResultValue(SubClassif.VOID, "", "primitive", ";");
+        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
     }
 
     private ResultValue declareStmt(boolean bExec) throws Exception {
@@ -179,7 +194,7 @@ public class Parser{
         }
 
         String variableStr = scan.currentToken.tokenStr;
-        res = new ResultValue(dclType, variableStr, "primitive");
+        res = new ResultValue(dclType, variableStr, Structure.PRIMITIVE);
 
         if(scan.getNext().equals("=")){
             res = expr();
@@ -256,7 +271,7 @@ public class Parser{
             default:
                 error("expected assignment operator %s", scan.currentToken.tokenStr);
         }
-        return new ResultValue(SubClassif.VOID, "", "primitive", scan.currentToken.tokenStr);
+        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
     private ResultValue expr() throws Exception{
@@ -304,11 +319,11 @@ public class Parser{
                     break;
                 }
                 else if(scan.currentToken.subClassif.equals(SubClassif.INTEGER) || scan.currentToken.subClassif.equals(SubClassif.FLOAT)) {
-                    res = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr, "primitive", "");
+                    res = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr, Structure.PRIMITIVE, "");
                     break;
                 }
                 else if (scan.currentToken.subClassif.equals(SubClassif.BOOLEAN) || scan.currentToken.subClassif.equals(SubClassif.STRING)) {
-                    res = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr, "primitive");
+                    res = new ResultValue(scan.currentToken.subClassif, scan.currentToken.tokenStr, Structure.PRIMITIVE);
                     return res;
                 }
             }
@@ -414,9 +429,8 @@ public class Parser{
             }
         }
 
-        return new ResultValue(SubClassif.VOID, "", "primitive", ";");
+        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
     }
-
 
     private ResultValue assign(String variableStr, ResultValue res) throws Exception {
         switch (res.type) {
@@ -440,4 +454,196 @@ public class Parser{
         return res;
     }
 
+    public ResultValue forStmt(Boolean bExec) throws Exception {
+        ResultValue res;
+        Token tempToken;
+
+        if (bExec) {
+            tempToken = scan.currentToken;
+            scan.getNext();
+
+            if (scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
+                error("Unexpected variable found: %s", scan.currentToken.tokenStr);
+            }
+
+            if(scan.nextToken.tokenStr.equals("=")) {
+                int cv, limit, incr;
+                String stringCV = scan.currentToken.tokenStr;
+                if(smStorage.getValue(stringCV) == null) {
+                    smStorage.insertValue(stringCV, new ResultValue(SubClassif.INTEGER, "", Structure.PRIMITIVE, "to"));
+                }
+
+                cv = Integer.parseInt(assignmentStmt(true).value);
+
+                if(!scan.getNext().equals("to")){
+                    error("Expected end variable but found: %s", scan.currentToken.tokenStr);
+                }
+
+                limit = Integer.parseInt(expr().value);
+
+                if(scan.getNext().equals("by")){
+                    incr = Integer.parseInt(expr().value);
+                    scan.getNext();
+                }
+                else {
+                    incr = 1;
+                }
+
+                if(!scan.currentToken.tokenStr.equals(":")) {
+                    error("Expected ':' after for statment");
+                }
+                for(int i = cv; i < limit; i+= incr) {
+                    res = statements(true, "endfor");
+
+                    if (!res.terminatingStr.equals("endfor")) {
+                        if(!scan.nextToken.tokenStr.equals(";")) {
+                            error("Expected 'endfor;' at end of for stmt");
+                        }
+                    }
+
+                    res = smStorage.getValue(stringCV);
+                    res.value = "" + (Integer.parseInt(res.value) + incr);
+                    smStorage.insertValue(stringCV, res);
+
+                    scan.setPosition(tempToken);
+                    skipTo(":");
+                }
+            }
+            else if (scan.nextToken.tokenStr.equals("in")) {
+                String tempStr = scan.currentToken.tokenStr;
+                String object;
+
+                scan.getNext();
+
+                if(scan.currentToken.primClassif != Classif.OPERAND) {
+                    error("Expected variable but found: %s", scan.currentToken.tokenStr);
+                }
+
+                res = expr();
+
+                if(!scan.getNext().equals(":")) {
+                    error("Expected ':' at end of for statement");
+                }
+
+                if(res.structure == Structure.FIXED_ARRAY) {
+                    ResultArray array = (ResultArray)smStorage.getValue(res.value);
+
+                    ArrayList<ResultValue> resultList = array.array;
+
+                    if (smStorage.getValue(tempStr) == null) {
+                        smStorage.insertValue(tempStr, new ResultValue(array.type, "", Structure.PRIMITIVE, "in"));
+                    }
+
+                    for(ResultValue value : resultList) {
+                        if(value == null) {
+                            continue;
+                        }
+
+                        res = smStorage.getValue(tempStr);
+                        res.value = "" + value.value;
+                        smStorage.insertValue(tempStr, res);
+                        res = statements(true, "endfor");
+
+                        if (!res.terminatingStr.equals("endfor")) {
+                            if(!scan.nextToken.tokenStr.equals(";")) {
+                                error("Expected 'endfor;' and end of for loop");
+                            }
+                        }
+
+                        scan.setPosition(tempToken);
+                        skipTo(":");
+                    }
+                }
+                else {
+                    object = res.value;
+
+                    smStorage.insertValue(tempStr, new ResultValue(SubClassif.STRING, "", Structure.PRIMITIVE, "in"));
+
+                    for (char ch : object.toCharArray()){
+                        res = smStorage.getValue(tempStr);
+                        res.value = "" + ch;
+                        smStorage.insertValue(tempStr, res);
+                        res = statements(true, "endfor");
+
+                        if (!res.terminatingStr.equals("endfor")) {
+                            if(!scan.nextToken.tokenStr.equals(";")) {
+                                error("Expected 'endfor;' and end of for loop");
+                            }
+                        }
+
+                        scan.setPosition(tempToken);
+                        skipTo(":");
+                    }
+                }
+            }
+            else if(scan.currentToken.tokenStr.equals("from")) {
+                String stringCV = scan.currentToken.tokenStr;
+                String str, delim;
+                String stringM[];
+
+                if(smStorage.getValue(stringCV) == null) {
+                    smStorage.insertValue(stringCV, new ResultValue(SubClassif.INTEGER, "", Structure.PRIMITIVE, "to"));
+                }
+
+                scan.getNext();
+
+                if(scan.nextToken.primClassif != Classif.OPERAND) {
+                    error("Expected variable but got: %s", scan.nextToken.tokenStr);
+                }
+
+                res = expr();
+
+                if(res.structure != Structure.PRIMITIVE) {
+                    error("Invalid type for for tokenizer");
+                }
+
+                str = res.value;
+
+                if(!scan.getNext().equals("by")) {
+                    error("Missing by for delimiter");
+                }
+
+                delim = expr().value;
+
+                if(!scan.getNext().equals(":")) {
+                    error("Missing ':' and end of for stmt");
+                }
+
+                stringM = str.split(Pattern.quote(delim));
+
+                smStorage.insertValue(stringCV, new ResultValue(SubClassif.STRING, "", Structure.PRIMITIVE, "from"));
+
+                for(String s : stringM) {
+                    res = smStorage.getValue(stringCV);
+                    res.value = "" + s;
+                    smStorage.insertValue(stringCV, res);
+                    res = statements(true, "endfor");
+
+                    if (!res.terminatingStr.equals("endfor")) {
+                        if(!scan.nextToken.tokenStr.equals(";")) {
+                            error("Expected 'endfor;' and end of for loop");
+                        }
+                    }
+
+                    scan.setPosition(tempToken);
+                    skipTo(":");
+                }
+            }
+            else {
+                error("Invalid control seperator: %s, expected '=', 'in', or 'from'", scan.currentToken.tokenStr);
+            }
+        }
+        else {
+            skipTo(":");
+        }
+        res = statements(false, "endfor");
+
+        if (!res.terminatingStr.equals("endfor")) {
+            if(!scan.nextToken.tokenStr.equals(";")) {
+                error("Expected 'endfor;' and end of for loop");
+            }
+        }
+
+        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
+    }
 }

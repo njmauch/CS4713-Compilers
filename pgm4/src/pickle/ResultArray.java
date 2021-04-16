@@ -2,22 +2,16 @@ package pickle;
 
 import java.util.ArrayList;
 
-enum ArrayStructure {
-    FIXED_ARRAY,
-    UNBOUNDED_ARRAY
-}
-
 public class ResultArray extends ResultValue implements Cloneable {
 
     String value;
-    ArrayList<ResultArray> array;
-    ArrayStructure structure;
+    ArrayList<ResultValue> array;
     int declaredSize;
     int lastPopulated;
 
-    public ResultArray(String value, ArrayList array, SubClassif type, ArrayStructure structure, int lastPopulated, int declaredSize)
+    public ResultArray(String value, ArrayList array, SubClassif type, Structure structure, int lastPopulated, int declaredSize)
     {
-        super(type, value, String.valueOf(structure), ";");
+        super(type, value, structure, ";");
         this.value = value;
         this.array = array;
         this.type = type;

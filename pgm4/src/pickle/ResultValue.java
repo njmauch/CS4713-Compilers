@@ -1,12 +1,18 @@
 package pickle;
 
+enum Structure {
+    PRIMITIVE,
+    FIXED_ARRAY,
+    UNBOUNDED_ARRAY
+}
+
 public class ResultValue {
     public SubClassif type;
     public String value;
-    public String structure;
+    public Structure structure;
     public String terminatingStr;
 
-    public ResultValue(SubClassif type, String value, String structure, String terminatingStr) {
+    public ResultValue(SubClassif type, String value, Structure structure, String terminatingStr) {
         this.type = type;
         this.value = value;
         this.structure = structure;
@@ -16,11 +22,11 @@ public class ResultValue {
     public ResultValue(SubClassif type, String value) {
         this.type = type;
         this.value = value;
-        this.structure = "";
+        this.structure = Structure.PRIMITIVE;
         this.terminatingStr = ";";
     }
 
-    public ResultValue(SubClassif type, String value, String structure) {
+    public ResultValue(SubClassif type, String value, Structure structure) {
         this.type = type;
         this.value = value;
         this.structure = structure;
@@ -30,7 +36,7 @@ public class ResultValue {
     public ResultValue() {
         this.type = SubClassif.EMPTY;
         this.value = "";
-        this.structure = "";
+        this.structure = Structure.PRIMITIVE;
         this.terminatingStr = "";
     }
 
