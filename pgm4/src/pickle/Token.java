@@ -75,7 +75,7 @@ public class Token
         ResultValue res = new ResultValue();
         res.type = this.subClassif;
         res.value = this.tokenStr;
-        res.structure = "PRIMITIVE";
+        res.structure = Structure.PRIMITIVE;
         return res;
     }
     public static Token copyToken(Token fromToken) {

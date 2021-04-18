@@ -22,10 +22,10 @@ public class SymbolTable {
     public static class STIdentifier extends STEntry{
         SubClassif subClassif;
         SubClassif dclType;
-        String structure;
+        Structure structure;
         String parm;
         String nonLocal;
-        public STIdentifier(String symbol, Classif primClassif, SubClassif subClassif, SubClassif type, String structure)
+        public STIdentifier(String symbol, Classif primClassif, SubClassif subClassif, SubClassif type, Structure structure)
         {
             super(symbol, primClassif);
             this.subClassif = subClassif;

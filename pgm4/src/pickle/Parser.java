@@ -48,10 +48,13 @@ public class Parser{
                 return declareStmt(bExec);
             }
             else if(scan.currentToken.subClassif.equals(SubClassif.FLOW)) {
-                if (scan.currentToken.tokenStr.equals("if")) {
-                    return ifStmt(bExec);
-                } else if (scan.currentToken.tokenStr.equals("while")) {
-                    return whileStmt(bExec);
+                switch (scan.currentToken.tokenStr) {
+                    case "if":
+                        return ifStmt(bExec);
+                    case "while":
+                        return whileStmt(bExec);
+                    case "for":
+                        return forStmt(bExec);
                 }
             }
             else if(scan.currentToken.subClassif.equals(SubClassif.END)) {
@@ -109,7 +112,7 @@ public class Parser{
 
     private ResultValue print() throws Exception {
         scan.getNext();
-        ResultValue res = null;
+        ResultValue res;
         StringBuilder printStr = new StringBuilder();
         int parenCount = 0;
         if(! scan.currentToken.tokenStr.equals("(")) {
@@ -139,7 +142,7 @@ public class Parser{
             }
             scan.getNext();
         }
-        System.out.println(printStr.toString());
+        System.out.println(printStr);
         scan.getNext();
         return new ResultValue(SubClassif.BUILTIN, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
@@ -177,6 +180,7 @@ public class Parser{
 
     private ResultValue declareStmt(boolean bExec) throws Exception {
         ResultValue res;
+        Structure structure = Structure.PRIMITIVE;
 
         SubClassif dclType = SubClassif.EMPTY;
 
@@ -194,26 +198,123 @@ public class Parser{
         }
 
         String variableStr = scan.currentToken.tokenStr;
-        res = new ResultValue(dclType, variableStr, Structure.PRIMITIVE);
+        res = new ResultValue(dclType, variableStr, structure);
 
-        if(scan.getNext().equals("=")){
-            res = expr();
+        if(bExec) {
+
+            Token tempToken = scan.currentToken;
+            if (scan.nextToken.tokenStr.equals("[")) {
+                scan.getNext();
+
+                structure = Structure.FIXED_ARRAY;
+                if (scan.nextToken.tokenStr.equals("]")) {
+                    scan.getNext();
+                    if (scan.nextToken.tokenStr.equals(";")) {
+                        error("Can't declare array without length");
+                    } else if (scan.nextToken.tokenStr.equals("=")) {
+                        scan.getNext();
+                        symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr
+                                , tempToken.primClassif, tempToken.subClassif, dclType, structure));
+                        smStorage.insertValue(variableStr, new ResultArray(tempToken.tokenStr, dclType, structure));
+                        return declareArray(bExec, variableStr, dclType, 0);
+                    } else {
+                        error("Invalid symbol: %s", scan.nextToken.tokenStr);
+                    }
+                } else if (scan.nextToken.primClassif != Classif.OPERATOR) {
+                    if (scan.nextToken.subClassif.equals(SubClassif.IDENTIFIER)) {
+                        if (smStorage.getValue(scan.nextToken.tokenStr) == null) {
+                            error("%s is not defined", scan.nextToken.tokenStr);
+                        }
+                    }
+                    Token leftToken = scan.currentToken;
+                    skipTo("]");
+                    scan.setPosition(leftToken);
+                    int dclLength = Integer.parseInt(Utility.castInt(this, expr()));
+                    if (dclLength < 0) {
+                        error("Array size must be positive");
+                    }
+                    //right bracket
+                    scan.getNext();
+                    //get = or ;
+                    scan.getNext();
+                    if (scan.currentToken.tokenStr.equals(";")) {
+                        symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, tempToken.primClassif, tempToken.subClassif, dclType, Structure.FIXED_ARRAY));
+                        ArrayList<ResultValue> tempArrayList = new ArrayList<>();
+                        for (int j = 0; j < dclLength; j++) {
+                            tempArrayList.add(null);
+                        }
+                        smStorage.insertValue(variableStr, new ResultArray(tempToken.tokenStr, tempArrayList, dclType, structure, 0, dclLength));
+                        return new ResultValue(SubClassif.DECLARE, "", Structure.FIXED_ARRAY, scan.currentToken.tokenStr);
+                    } else if (scan.currentToken.tokenStr.equals("=")) {
+                        symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, tempToken.primClassif, tempToken.subClassif, dclType, Structure.FIXED_ARRAY));
+                        ArrayList<ResultValue> tempArrayList = new ArrayList<>();
+                        for (int j = 0; j < dclLength; j++) {
+                            tempArrayList.add(null);
+                        }
+                        smStorage.insertValue(variableStr, new ResultArray(tempToken.tokenStr, tempArrayList, dclType, structure, 0, dclLength));
+                        return declareArray(bExec, variableStr, dclType, dclLength);
+                    } else {
+                        error("Expected = or ; and got: %s", scan.currentToken.tokenStr);
+                    }
+                } else {
+                    error("Invalid length: %s", scan.nextToken.tokenStr);
+                }
+            } else {
+                if (scan.nextToken.tokenStr.equals("]")) {
+                    error("Missing [ with ]");
+                }
+                symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr,
+                        scan.currentToken.primClassif, scan.currentToken.subClassif, dclType, structure));
+                smStorage.insertValue(variableStr, new ResultValue(dclType, "", structure));
+            }
         }
-        if(! scan.currentToken.tokenStr.equals(";")) {
-            error("Expected ';' at end of statement");
+        if(scan.nextToken.tokenStr.equals("=")) {
+            return assignmentStmt(bExec);
         }
+        else if(scan.nextToken.tokenStr.equals("[")){
+            scan.getNext();
+            structure = Structure.FIXED_ARRAY;
+            if (scan.nextToken.tokenStr.equals("]")) {
+                scan.getNext();
 
-        //SymbolTable.STEntry stEntry = symbolTable.getSymbol(variableStr);
+                if (scan.nextToken.tokenStr.equals(";"))
+                    error("Can't declary array without length");
+                else if (scan.nextToken.tokenStr.equals("="))
+                {
+                    scan.getNext();
+                    return declareArray(bExec, variableStr, dclType, 0);
+                }
+                else
+                    error("Expected = or ; and got: %s", scan.nextToken.tokenStr);
+            }
+            int length = Integer.parseInt(Utility.castInt(this, expr()));
+            if (length < 0) {
+                error("Array size must be positive");
+            }
 
-        if(bExec)
-            symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, Classif.OPERAND, SubClassif.IDENTIFIER, dclType,"primitive"));
-
-        return res;
-
+            scan.getNext();
+            scan.getNext();
+            if (scan.currentToken.tokenStr.equals(";")) {
+                return new ResultValue(SubClassif.DECLARE, "", Structure.FIXED_ARRAY, scan.currentToken.tokenStr);
+            }
+            else if (scan.currentToken.tokenStr.equals("=")) {
+                return declareArray(bExec, variableStr, dclType, length);
+            }
+            else {
+                error("Expected = or ; and got: %s", scan.nextToken.tokenStr);
+            }
+        }
+        else if (scan.nextToken.primClassif == Classif.OPERATOR) {
+            error("Can't perform declare before being initialized: %s", scan.nextToken.tokenStr);
+        }
+        else if(! scan.getNext().equals(";")) {
+            error("Declare statment not terminated");
+        }
+        return new ResultValue(SubClassif.DECLARE,"",  Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
     public ResultValue assignmentStmt(boolean bExec) throws Exception {
-        ResultValue res = new ResultValue();
+        ResultValue res;
         Numeric nOp2;
         Numeric nOp1;
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
@@ -281,7 +382,7 @@ public class Parser{
 
         while (true) {
             if (scan.currentToken.primClassif.equals(Classif.OPERATOR)) {
-                if (scan.currentToken.primClassif != Classif.OPERAND && ! scan.currentToken.tokenStr.equals("-")) {
+                if (! scan.currentToken.tokenStr.equals("-")) {
                     error("Expected operand %s", scan.currentToken.tokenStr);
                 }
                 scan.getNext();
@@ -303,6 +404,7 @@ public class Parser{
                 } else {
                     error("Need numeric value %s", scan.currentToken.tokenStr);
                 }
+                assert nOp1 != null;
                 res = Utility.uMinus(this, nOp1);
                 break;
             }
@@ -645,5 +747,219 @@ public class Parser{
         }
 
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
+    }
+
+    public ResultArray declareArray(boolean bExec, String variableStr, SubClassif type, int declared) throws Exception {
+        ResultValue resExpr = new ResultValue();
+        ResultArray resultArray;
+        ArrayList<ResultValue> exprValue = new ArrayList<>();
+        int populated = 1;
+        Token tempToken = scan.currentToken;
+
+        if(bExec) {
+            while(!resExpr.terminatingStr.equals(";") && !scan.nextToken.tokenStr.equals(";")) {
+                resExpr = expr();
+                if ((resExpr.structure == Structure.FIXED_ARRAY) || (resExpr.structure == Structure.UNBOUNDED_ARRAY)) {
+                    if (populated != 1) {
+                        error("Can only have one value as an array in value list");
+                        scan.setPosition(tempToken);
+                        return assignArrayStmt(variableStr, type, declared);
+                    }
+                    scan.getNext();
+                    populated++;
+                    if (type == SubClassif.INTEGER) {
+                        resExpr.value = Utility.castInt(this, resExpr);
+                        resExpr.type = SubClassif.INTEGER;
+                        exprValue.add(resExpr);
+                    } else if (type == SubClassif.FLOAT) {
+                        resExpr.value = Utility.castFloat(this, resExpr);
+                        resExpr.type = SubClassif.FLOAT;
+                        exprValue.add(resExpr);
+                    } else if (type == SubClassif.BOOLEAN) {
+                        resExpr.value = Utility.castBoolean(this, resExpr);
+                        resExpr.type = SubClassif.BOOLEAN;
+                        exprValue.add(resExpr);
+                    } else if (type == SubClassif.STRING) {
+                        resExpr.type = SubClassif.STRING;
+                        exprValue.add(resExpr);
+                    } else {
+                        error("Invalid assign type: %s", variableStr);
+                    }
+                }
+            }
+            if(declared != -1 && exprValue.size() > declared) {
+                declared = exprValue.size();
+            }
+            if(declared == -1) {
+                resultArray = new ResultArray(variableStr, exprValue, type, Structure.UNBOUNDED_ARRAY, --populated, declared);
+            }
+            else {
+                resultArray = new ResultArray(variableStr, exprValue, type, Structure.FIXED_ARRAY, --populated, declared);
+            }
+
+            while(resultArray.array.size() < declared) {
+                resultArray.array.add(null);
+            }
+            smStorage.insertValue(variableStr, resultArray);
+            return resultArray;
+        }
+        else {
+            skipTo(";");
+        }
+        return new ResultArray( "", SubClassif.VOID, Structure.PRIMITIVE, scan.currentToken.tokenStr);
+    }
+
+    private ResultArray assignArrayStmt(String variableStr, SubClassif type, int declared) throws Exception {
+        ResultValue resExpr;
+        ResultArray resultArray = new ResultArray();
+        int populated = 1;
+        if(scan.nextToken.primClassif == Classif.OPERAND) {
+            ResultArray resultArray1 = (ResultArray) smStorage.getValue(variableStr);
+            ResultValue resultValue = expr();
+
+            if(resultArray1 == null) {
+                error("Variable not defined: %s", variableStr);
+            }
+            if(resultValue == null) {
+                error("Variable not defined: %s", scan.nextToken.tokenStr);
+            }
+            assert resultArray1 != null;
+            if(resultArray1.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                assert resultValue != null;
+                if (resultValue.structure.equals(Structure.PRIMITIVE)) {
+                    error("Can't assign scalar to unbounded array");
+                }
+            }
+            assert resultValue != null;
+            if(resultValue.structure.equals(Structure.PRIMITIVE)) {
+                for(int i = 0; i < resultArray1.declaredSize; i++) {
+                    if(type.equals(SubClassif.INTEGER)) {
+                        resExpr = resultValue.clone();
+                        resExpr.value = Utility.castInt(this, resExpr);
+                        resExpr.type = SubClassif.INTEGER;
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else if(type.equals(SubClassif.FLOAT)) {
+                        resExpr = resultValue.clone();
+                        resExpr.value = Utility.castFloat(this, resExpr);
+                        resExpr.type = SubClassif.FLOAT;
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else if(type.equals(SubClassif.BOOLEAN)) {
+                        resExpr = resultValue.clone();
+                        resExpr.value = Utility.castBoolean(this, resExpr);
+                        resExpr.type = SubClassif.BOOLEAN;
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else if(type.equals(SubClassif.STRING)) {
+                        resExpr = resultValue.clone();
+                        resExpr.type = SubClassif.FLOAT;
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else {
+                        error("Invalid assign type: %s", variableStr);
+                    }
+                }
+                if(!scan.nextToken.tokenStr.equals(";")) {
+                    error("Can only have one argument when using array to scalar assignment");
+                }
+                if(declared == -1) {
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, populated, declared);
+                }
+                else {
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, populated, declared);
+                }
+            }
+            else if(resultValue.structure == Structure.FIXED_ARRAY || resultValue.structure == Structure.UNBOUNDED_ARRAY) {
+                ResultArray resultArray2 = (ResultArray) resultValue;
+                int iDclLength = resultArray1.declaredSize;
+                int iPopLength = resultArray2.declaredSize;
+
+                if(declared != -1 && iDclLength < iPopLength) {
+                    iPopLength = iDclLength;
+                }
+                for(int i = 0; i < iPopLength; i++) {
+                    if(type.equals(SubClassif.INTEGER)) {
+                        resExpr = resultArray2.array.get(i).clone();
+                        resExpr.value = Utility.castInt(this, resExpr);
+                        resExpr.type = SubClassif.INTEGER;
+                        if (declared == -1) {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                        }
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else if(type.equals(SubClassif.FLOAT)) {
+                        resExpr = resultArray2.array.get(i).clone();
+                        resExpr.value = Utility.castFloat(this, resExpr);
+                        resExpr.type = SubClassif.FLOAT;
+                        if (declared == -1) {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                        }
+                        resultArray1.array.set(i, resExpr);
+
+                    }
+                    else if(type.equals(SubClassif.BOOLEAN)) {
+                        resExpr = resultArray2.array.get(i).clone();
+                        resExpr.value = Utility.castBoolean(this, resExpr);
+                        resExpr.type = SubClassif.BOOLEAN;
+                        if (declared == -1) {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                        }
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else if(type.equals(SubClassif.STRING)) {
+                        resExpr = resultArray2.array.get(i).clone();
+                        resExpr.type = SubClassif.STRING;
+                        if (declared == -1) {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                        }
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else {
+                        error("Invalid assign type: %s", variableStr);
+                    }
+                }
+                for(ResultValue tempRes : resultArray1.array) {
+                    if(tempRes != null) {
+                        populated++;
+                    }
+                }
+                if (!scan.nextToken.tokenStr.equals(";")) {
+                    error("Can only have one argument when using array to array assignment");
+                }
+                if(declared == -1) {
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, populated, declared);
+                }
+                else {
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, populated, declared);
+                }
+                smStorage.insertValue(variableStr, resultArray);
+                return resultArray;
+            }
+        }
+        else{
+            error("Expected operand: %s", scan.nextToken.tokenStr);
+        }
+        return resultArray;
     }
 }

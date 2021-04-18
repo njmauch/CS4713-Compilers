@@ -40,4 +40,8 @@ public class ResultValue {
         this.terminatingStr = "";
     }
 
+    public ResultValue clone() throws CloneNotSupportedException {
+        ResultValue res = (ResultValue) super.clone();
+        return res;
+    }
 }
