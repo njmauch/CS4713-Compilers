@@ -122,7 +122,7 @@ public class Parser{
         while(!scan.currentToken.tokenStr.equals(";")) {
             res = expr(true);
             line = res.value + " ";
-            prevToken = scan.nextToken;
+            prevToken = scan.currentToken;
             scan.getNext();
             while (scan.currentToken.tokenStr.equals(")")) {
                 scan.getNext();
@@ -134,9 +134,9 @@ public class Parser{
                 error("Missing separator");
             }
         }
-        if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
+        /*if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
             error("Func %s missing closing paren", funcName);
-        }
+        }*/
         System.out.println(line);
         return res;
     }
@@ -308,65 +308,230 @@ public class Parser{
     }
 
     public ResultValue assignmentStmt(boolean bExec) throws Exception {
-        ResultValue res = new ResultValue();
+        ResultValue res;
+        SubClassif type = SubClassif.EMPTY;
         Numeric nOp2;
         Numeric nOp1;
+        int iIndex = 0;
+        int iIndex2 = 0;
+        boolean bIndex = false;
+        ResultValue resO2;
+        ResultValue resO1 = null;
+        if(bExec) {
+            try{
+                type = smStorage.getValue(scan.currentToken.tokenStr).type;
+            }
+            catch(Exception e) {
+                error("Variable has not yet been declared: %s", scan.currentToken.tokenStr);
+            }
+        }
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
             error("Expected a variable for the target assignment %s", scan.currentToken.tokenStr);
         }
         String variableStr = scan.currentToken.tokenStr;
         res = smStorage.getValue(variableStr);
         scan.getNext();
-        if(scan.currentToken.primClassif != Classif.OPERATOR) {
-            error("expected assignment operator %s", scan.currentToken.tokenStr);
+        if(res == null && bExec){
+            error("%s required to be declared", variableStr);
         }
-        String operatorStr = scan.currentToken.tokenStr;
 
-        ResultValue resO2;
-        ResultValue resO1;
+        if(scan.currentToken.tokenStr.equals("[")){
+            iIndex = Integer.parseInt(Utility.castInt(this, expr(false)));
+            scan.getNext();
+            scan.getNext();
+            bIndex = true;
+        }
 
-        switch(operatorStr) {
-            case "=":
-                if (bExec) {
-                    res = assign(variableStr, expr(false));
-                    res.terminatingStr = scan.nextToken.tokenStr;
-                    if(scan.currentToken.primClassif != Classif.OPERAND) {
-                        scan.getNext();
+        if(scan.currentToken.primClassif != Classif.OPERATOR) {
+            error("Expected operator but got: %s", scan.currentToken.tokenStr);
+        }
+
+        if(scan.currentToken.tokenStr.equals("=")) {
+            if (bExec) {
+                if (res.structure.equals(Structure.PRIMITIVE)) {
+                    if (bIndex == false) {
+                        resO1 = assign(variableStr, expr(false));
+                        if (scan.currentToken.primClassif != Classif.OPERAND) {
+                            scan.getNext();
+                        }
+                    } else {
+                        resO2 = expr(false);
+                        String strValue = smStorage.getValue(variableStr).value;
+                        if (iIndex == -1) {
+                            iIndex = strValue.length() - 1;
+                        }
+                        if (iIndex > strValue.length() - 1) {
+                            error("Index %s out of bounds", iIndex);
+                        }
+                        String tempValue;
+                        if (iIndex2 == 0) {
+                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                        } else {
+                            tempValue = strValue.substring(0, iIndex) + resO2.value;
+                        }
+                        ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                        resO1 = assign(variableStr, finalRes);
                     }
-                    return res;
+                    return resO1;
+                } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                    if (bIndex == false) {
+                        resO1 = assignArrayStmt(variableStr, type, ((ResultArray) res).declaredSize);
+                    } else {
+                        if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                            error("Index %d out of bounds", iIndex);
+                        }
+                        if (iIndex < 0) {
+                            if (((ResultArray) res).declaredSize != -1) {
+                                iIndex += ((ResultArray) res).declaredSize;
+                            } else {
+                                iIndex += ((ResultArray) res).lastPopulated;
+                            }
+                        }
+                        if (((ResultArray) res).declaredSize == -1) {
+                            while (iIndex >= ((ResultArray) res).array.size()) {
+                                ((ResultArray) res).array.add(null);
+                            }
+                        }
+                        ResultValue tempRes = expr(false);
+                        resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                    }
+                    return resO1;
+                } else {
+                    error("Invalid structure type on %s", res.value);
                 }
-                else {
-                    skipTo(";");
-                    break;
+            } else {
+                skipTo(";");
+            }
+        }
+        else if(scan.currentToken.tokenStr.equals("+=")) {
+            if (bExec) {
+                if (res.structure.equals(Structure.PRIMITIVE)) {
+                    if (!bIndex) {
+                        nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
+                        nOp1 = new Numeric(this, res, "+=", "1st Operand");
+                        ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
+                        resO1 = assign(variableStr, resTemp);
+                        if (scan.currentToken.primClassif != Classif.OPERAND) {
+                            scan.getNext();
+                        }
+                    } else {
+                        resO2 = expr(false);
+                        String strValue = smStorage.getValue(variableStr).value;
+                        if (iIndex == -1) {
+                            iIndex = strValue.length() - 1;
+                        }
+                        if (iIndex > strValue.length() - 1) {
+                            error("Index %s out of bounds", iIndex);
+                        }
+                        String tempValue;
+                        if (iIndex2 == 0) {
+                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                        } else {
+                            tempValue = strValue.substring(0, iIndex) + resO2.value;
+                        }
+                        ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                        resO1 = assign(variableStr, finalRes);
+                    }
+                    return resO1;
+                } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                    if (!bIndex) {
+                        error("Can't perform += on array");
+                    } else {
+                        if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                            error("Index %d out of bounds", iIndex);
+                        }
+                        if (iIndex < 0) {
+                            if (((ResultArray) res).declaredSize != -1) {
+                                iIndex += ((ResultArray) res).declaredSize;
+                            } else {
+                                iIndex += ((ResultArray) res).lastPopulated;
+                            }
+                        }
+                        if (((ResultArray) res).declaredSize == -1) {
+                            while (iIndex >= ((ResultArray) res).array.size()) {
+                                ((ResultArray) res).array.add(null);
+                            }
+                        }
+                        ResultValue tempRes = expr(false);
+                        ResultValue tempRes2 = ((ResultArray) res).array.get(iIndex);
+                        nOp2 = new Numeric(this, tempRes, "+=", "2nd Operand");
+                        nOp1 = new Numeric(this, tempRes2, "+=", "1st Operand");
+                        tempRes = Utility.addition(this, nOp2, nOp1);
+                        resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                    }
+                    return resO1;
+                } else {
+                    error("Invalid structure type on %s", res.value);
                 }
-            case "-=":
-                if (bExec) {
-                    resO2 = expr(false);
-                    nOp2 = new Numeric(this, resO2, "-=", "2nd Operand");
-                    resO1 = this.smStorage.getValue(variableStr);
-                    nOp1 = new Numeric(this, resO1, "-=", "1st Operand");
-                    res = assign(variableStr, Utility.subtraction(this, nOp1, nOp2));
-                    return res;
+            } else {
+                skipTo(";");
+            }
+        }
+        else if (scan.currentToken.tokenStr.equals("-=")) {
+            if (bExec) {
+                if (res.structure.equals(Structure.PRIMITIVE)) {
+                    if (!bIndex) {
+                        nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
+                        nOp1 = new Numeric(this, res, "+=", "1st Operand");
+                        ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
+                        resO1 = assign(variableStr, resTemp);
+                        if (scan.currentToken.primClassif != Classif.OPERAND) {
+                            scan.getNext();
+                        }
+                    } else {
+                        resO2 = expr(false);
+                        String strValue = smStorage.getValue(variableStr).value;
+                        if (iIndex == -1) {
+                            iIndex = strValue.length() - 1;
+                        }
+                        if (iIndex > strValue.length() - 1) {
+                            error("Index %s out of bounds", iIndex);
+                        }
+                        String tempValue;
+                        if (iIndex2 == 0) {
+                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                        } else {
+                            tempValue = strValue.substring(0, iIndex) + resO2.value;
+                        }
+                        ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                        resO1 = assign(variableStr, finalRes);
+                    }
+                    return resO1;
+                } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                    if (!bIndex) {
+                        error("Can't perform += on array");
+                    } else {
+                        if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                            error("Index %d out of bounds", iIndex);
+                        }
+                        if (iIndex < 0) {
+                            if (((ResultArray) res).declaredSize != -1) {
+                                iIndex += ((ResultArray) res).declaredSize;
+                            } else {
+                                iIndex += ((ResultArray) res).lastPopulated;
+                            }
+                        }
+                        if (((ResultArray) res).declaredSize == -1) {
+                            while (iIndex >= ((ResultArray) res).array.size()) {
+                                ((ResultArray) res).array.add(null);
+                            }
+                        }
+                        ResultValue tempRes = expr(false);
+                        ResultValue tempRes2 = ((ResultArray) res).array.get(iIndex);
+                        nOp2 = new Numeric(this, tempRes, "-=", "2nd Operand");
+                        nOp1 = new Numeric(this, tempRes2, "-=", "1st Operand");
+                        tempRes = Utility.subtraction(this, nOp2, nOp1);
+                        resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                    }
+                    return resO1;
+                } else {
+                    error("Invalid structure type on %s", res.value);
                 }
-                else {
-                    skipTo(";");
-                    break;
-                }
-            case "+=":
-                if (bExec) {
-                    resO2 = expr(false);
-                    nOp2 = new Numeric(this, resO2, "-=", "2nd Operand");
-                    resO1 = this.smStorage.getValue(variableStr);
-                    nOp1 = new Numeric(this, resO1, "-=", "1st Operand");
-                    res = assign(variableStr, Utility.addition(this, nOp1, nOp2));
-                    return res;
-                }
-                else {
-                    skipTo(";");
-                    break;
-                }
-            default:
-                error("expected assignment operator %s", scan.currentToken.tokenStr);
+            } else {
+                skipTo(";");
+            }
+        } else {
+        error("Expected assignment operator but got %s", scan.currentToken.tokenStr);
         }
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
@@ -379,7 +544,7 @@ public class Parser{
         boolean bFound;
         boolean bCategory = false;
 
-        if(scan.currentToken.tokenStr.equals(";")) {
+        if(scan.nextToken.tokenStr.equals(";")) {
             error("Expected operand");
         }
         if(scan.currentToken.primClassif == Classif.FUNCTION && (scan.currentToken.tokenStr.equals("print"))) {
@@ -406,7 +571,7 @@ public class Parser{
                     bCategory = true;
                     break;
                 case OPERATOR:
-                    if (bCategory == false && !scan.currentToken.tokenStr.equals("-") && !scan.currentToken.tokenStr.equals("not")) {
+                    if (bCategory == false && !scan.currentToken.tokenStr.equals("-")) {
                         error("Unexpected operator, instead got: %s", scan.currentToken.tokenStr);
                     }
                     if(scan.currentToken.tokenStr.equals("-")) {
@@ -522,7 +687,6 @@ public class Parser{
             }
         }
         res = (ResultValue) outStack.pop();
-        System.out.println(res.value);
         scan.setPosition(prevToken);
         res.terminatingStr = scan.nextToken.tokenStr;
         return res;
@@ -902,6 +1066,69 @@ public class Parser{
             skipTo(";");
         }
         return new ResultArray( "", SubClassif.VOID, Structure.PRIMITIVE, scan.currentToken.tokenStr);
+    }
+
+    public ResultValue assignIndex(String variableStr, SubClassif type, int iIndex, ResultValue resIndex) throws Exception{
+        ResultValue resultValue = new ResultValue();
+        ResultArray resultArray = null;
+        int populated = 0;
+
+        if(scan.nextToken.primClassif.equals(Classif.SEPARATOR)) {
+            ResultArray resultArray1 = (ResultArray) smStorage.getValue(variableStr);
+            ResultValue resultValue1 = resIndex;
+            if (!scan.nextToken.tokenStr.equals(";")) {
+                error("Missing ;");
+            }
+            if (resultArray1 == null) {
+                error("Variable %s not in scope", variableStr);
+            }
+            if (resultValue1 == null) {
+                error("Operand %s not in scope", scan.nextToken.tokenStr);
+            }
+            if (resultValue1.structure.equals(Structure.PRIMITIVE)) {
+                if (type.equals(SubClassif.INTEGER)) {
+                    resultValue = resultValue1.clone();
+                    resultValue.value = Utility.castInt(this, resultValue);
+                    resultValue.type = SubClassif.INTEGER;
+                    resultArray1.array.set(iIndex, resultValue);
+                } else if (type.equals(SubClassif.FLOAT)) {
+                    resultValue = resultValue1.clone();
+                    resultValue.value = Utility.castFloat(this, resultValue);
+                    resultValue.type = SubClassif.FLOAT;
+                    resultArray1.array.set(iIndex, resultValue);
+                }
+                if (type.equals(SubClassif.BOOLEAN)) {
+                    resultValue = resultValue1.clone();
+                    resultValue.value = Utility.castBoolean(this, resultValue);
+                    resultValue.type = SubClassif.BOOLEAN;
+                    resultArray1.array.set(iIndex, resultValue);
+                }
+                if (type.equals(SubClassif.STRING)) {
+                    resultValue = resultValue1.clone();
+                    resultValue.type = SubClassif.STRING;
+                    resultArray1.array.set(iIndex, resultValue);
+                }
+            } else {
+                error("Can't assign structure into index", resultValue1.structure);
+            }
+            for (ResultValue resTemp : resultArray1.array) {
+                if (resTemp != null) {
+                    populated++;
+                }
+            }
+            if (resultArray1.declaredSize == -1) {
+                resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, populated, resultArray.declaredSize);
+            } else {
+                resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, populated, resultArray.declaredSize);
+            }
+            smStorage.insertValue(variableStr, resultArray);
+        }
+        else {
+            scan.nextToken.printToken();
+            error("Can't asssign %s into index", scan.nextToken.tokenStr);
+        }
+
+        return null;
     }
 
     private ResultArray assignArrayStmt(String variableStr, SubClassif type, int declared) throws Exception {
