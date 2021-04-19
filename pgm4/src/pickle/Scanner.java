@@ -256,8 +256,8 @@ public class Scanner {
         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
         //currentToken = new Token();
         //nextToken = new Token();
-        this.getNextToken();
-        this.getNextToken();
+        this.getNext();
+        this.getNext();
     }
     private void createStringToken(Token strToken) throws Exception {
         strToken.primClassif = Classif.OPERAND;

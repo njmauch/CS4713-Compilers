@@ -1,7 +1,6 @@
 package pickle;
 
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Stack;
 import java.util.regex.Pattern;
@@ -272,7 +271,7 @@ public class Parser{
                 scan.getNext();
 
                 if (scan.nextToken.tokenStr.equals(";"))
-                    error("Can't declary array without length");
+                    error("Can't declare array without length");
                 else if (scan.nextToken.tokenStr.equals("="))
                 {
                     scan.getNext();
@@ -346,199 +345,195 @@ public class Parser{
             error("Expected operator but got: %s", scan.currentToken.tokenStr);
         }
 
-        if(scan.currentToken.tokenStr.equals("=")) {
-            if (bExec) {
-                if (res.structure.equals(Structure.PRIMITIVE)) {
-                    if (bIndex == false) {
-                        resO1 = assign(variableStr, expr(false));
-                        if (scan.currentToken.primClassif != Classif.OPERAND) {
-                            scan.getNext();
-                        }
-                    } else {
-                        resO2 = expr(false);
-                        String strValue = smStorage.getValue(variableStr).value;
-                        if (iIndex == -1) {
-                            iIndex = strValue.length() - 1;
-                        }
-                        if (iIndex > strValue.length() - 1) {
-                            error("Index %s out of bounds", iIndex);
-                        }
-                        String tempValue;
-                        if (iIndex2 == 0) {
-                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+        switch (scan.currentToken.tokenStr) {
+            case "=":
+                if (bExec) {
+                    if (res.structure.equals(Structure.PRIMITIVE)) {
+                        if (!bIndex) {
+                            resO1 = assign(variableStr, expr(false));
+                            if (scan.currentToken.primClassif != Classif.OPERAND) {
+                                scan.getNext();
+                            }
                         } else {
-                            tempValue = strValue.substring(0, iIndex) + resO2.value;
-                        }
-                        ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
-                        resO1 = assign(variableStr, finalRes);
-                    }
-                    return resO1;
-                } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
-                    if (bIndex == false) {
-                        resO1 = assignArrayStmt(variableStr, type, ((ResultArray) res).declaredSize);
-                    } else {
-                        if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
-                            error("Index %d out of bounds", iIndex);
-                        }
-                        if (iIndex < 0) {
-                            if (((ResultArray) res).declaredSize != -1) {
-                                iIndex += ((ResultArray) res).declaredSize;
+                            resO2 = expr(false);
+                            String strValue = smStorage.getValue(variableStr).value;
+                            if (iIndex == -1) {
+                                iIndex = strValue.length() - 1;
+                            }
+                            if (iIndex > strValue.length() - 1) {
+                                error("Index %s out of bounds", iIndex);
+                            }
+                            String tempValue;
+                            if (iIndex2 == 0) {
+                                tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
                             } else {
-                                iIndex += ((ResultArray) res).lastPopulated;
+                                tempValue = strValue.substring(0, iIndex) + resO2.value;
                             }
+                            ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                            resO1 = assign(variableStr, finalRes);
                         }
-                        if (((ResultArray) res).declaredSize == -1) {
-                            while (iIndex >= ((ResultArray) res).array.size()) {
-                                ((ResultArray) res).array.add(null);
-                            }
-                        }
-                        ResultValue tempRes = expr(false);
-                        resO1 = assignIndex(variableStr, type, iIndex, tempRes);
-                    }
-                    return resO1;
-                } else {
-                    error("Invalid structure type on %s", res.value);
-                }
-            } else {
-                skipTo(";");
-            }
-        }
-        else if(scan.currentToken.tokenStr.equals("+=")) {
-            if (bExec) {
-                if (res.structure.equals(Structure.PRIMITIVE)) {
-                    if (!bIndex) {
-                        nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
-                        nOp1 = new Numeric(this, res, "+=", "1st Operand");
-                        ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
-                        resO1 = assign(variableStr, resTemp);
-                        if (scan.currentToken.primClassif != Classif.OPERAND) {
-                            scan.getNext();
-                        }
-                    } else {
-                        resO2 = expr(false);
-                        String strValue = smStorage.getValue(variableStr).value;
-                        if (iIndex == -1) {
-                            iIndex = strValue.length() - 1;
-                        }
-                        if (iIndex > strValue.length() - 1) {
-                            error("Index %s out of bounds", iIndex);
-                        }
-                        String tempValue;
-                        if (iIndex2 == 0) {
-                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                        return resO1;
+                    } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                        if (bIndex == false) {
+                            resO1 = assignArrayStmt(variableStr, type, ((ResultArray) res).declaredSize);
                         } else {
-                            tempValue = strValue.substring(0, iIndex) + resO2.value;
+                            if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                                error("Index %d out of bounds", iIndex);
+                            }
+                            if (iIndex < 0) {
+                                if (((ResultArray) res).declaredSize != -1) {
+                                    iIndex += ((ResultArray) res).declaredSize;
+                                } else {
+                                    iIndex += ((ResultArray) res).lastPopulated;
+                                }
+                            }
+                            if (((ResultArray) res).declaredSize == -1) {
+                                while (iIndex >= ((ResultArray) res).array.size()) {
+                                    ((ResultArray) res).array.add(null);
+                                }
+                            }
+                            ResultValue tempRes = expr(false);
+                            resO1 = assignIndex(variableStr, type, iIndex, tempRes);
                         }
-                        ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
-                        resO1 = assign(variableStr, finalRes);
-                    }
-                    return resO1;
-                } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
-                    if (!bIndex) {
-                        error("Can't perform += on array");
+                        return resO1;
                     } else {
-                        if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
-                            error("Index %d out of bounds", iIndex);
-                        }
-                        if (iIndex < 0) {
-                            if (((ResultArray) res).declaredSize != -1) {
-                                iIndex += ((ResultArray) res).declaredSize;
-                            } else {
-                                iIndex += ((ResultArray) res).lastPopulated;
-                            }
-                        }
-                        if (((ResultArray) res).declaredSize == -1) {
-                            while (iIndex >= ((ResultArray) res).array.size()) {
-                                ((ResultArray) res).array.add(null);
-                            }
-                        }
-                        ResultValue tempRes = expr(false);
-                        ResultValue tempRes2 = ((ResultArray) res).array.get(iIndex);
-                        nOp2 = new Numeric(this, tempRes, "+=", "2nd Operand");
-                        nOp1 = new Numeric(this, tempRes2, "+=", "1st Operand");
-                        tempRes = Utility.addition(this, nOp2, nOp1);
-                        resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                        error("Invalid structure type on %s", res.value);
                     }
-                    return resO1;
                 } else {
-                    error("Invalid structure type on %s", res.value);
+                    skipTo(";");
                 }
-            } else {
-                skipTo(";");
-            }
-        }
-        else if (scan.currentToken.tokenStr.equals("-=")) {
-            if (bExec) {
-                if (res.structure.equals(Structure.PRIMITIVE)) {
-                    if (!bIndex) {
-                        nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
-                        nOp1 = new Numeric(this, res, "+=", "1st Operand");
-                        ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
-                        resO1 = assign(variableStr, resTemp);
-                        if (scan.currentToken.primClassif != Classif.OPERAND) {
-                            scan.getNext();
-                        }
-                    } else {
-                        resO2 = expr(false);
-                        String strValue = smStorage.getValue(variableStr).value;
-                        if (iIndex == -1) {
-                            iIndex = strValue.length() - 1;
-                        }
-                        if (iIndex > strValue.length() - 1) {
-                            error("Index %s out of bounds", iIndex);
-                        }
-                        String tempValue;
-                        if (iIndex2 == 0) {
-                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                break;
+            case "+=":
+                if (bExec) {
+                    if (res.structure.equals(Structure.PRIMITIVE)) {
+                        if (!bIndex) {
+                            nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
+                            nOp1 = new Numeric(this, res, "+=", "1st Operand");
+                            ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
+                            resO1 = assign(variableStr, resTemp);
+                            if (scan.currentToken.primClassif != Classif.OPERAND) {
+                                scan.getNext();
+                            }
                         } else {
-                            tempValue = strValue.substring(0, iIndex) + resO2.value;
+                            resO2 = expr(false);
+                            String strValue = smStorage.getValue(variableStr).value;
+                            if (iIndex == -1) {
+                                iIndex = strValue.length() - 1;
+                            }
+                            if (iIndex > strValue.length() - 1) {
+                                error("Index %s out of bounds", iIndex);
+                            }
+                            String tempValue;
+                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                            ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                            resO1 = assign(variableStr, finalRes);
                         }
-                        ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
-                        resO1 = assign(variableStr, finalRes);
-                    }
-                    return resO1;
-                } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
-                    if (!bIndex) {
-                        error("Can't perform += on array");
+                        return resO1;
+                    } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                        if (!bIndex) {
+                            error("Can't perform += on array");
+                        } else {
+                            if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                                error("Index %d out of bounds", iIndex);
+                            }
+                            if (iIndex < 0) {
+                                if (((ResultArray) res).declaredSize != -1) {
+                                    iIndex += ((ResultArray) res).declaredSize;
+                                } else {
+                                    iIndex += ((ResultArray) res).lastPopulated;
+                                }
+                            }
+                            if (((ResultArray) res).declaredSize == -1) {
+                                while (iIndex >= ((ResultArray) res).array.size()) {
+                                    ((ResultArray) res).array.add(null);
+                                }
+                            }
+                            ResultValue tempRes = expr(false);
+                            ResultValue tempRes2 = ((ResultArray) res).array.get(iIndex);
+                            nOp2 = new Numeric(this, tempRes, "+=", "2nd Operand");
+                            nOp1 = new Numeric(this, tempRes2, "+=", "1st Operand");
+                            tempRes = Utility.addition(this, nOp2, nOp1);
+                            resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                        }
+                        return resO1;
                     } else {
-                        if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
-                            error("Index %d out of bounds", iIndex);
-                        }
-                        if (iIndex < 0) {
-                            if (((ResultArray) res).declaredSize != -1) {
-                                iIndex += ((ResultArray) res).declaredSize;
-                            } else {
-                                iIndex += ((ResultArray) res).lastPopulated;
-                            }
-                        }
-                        if (((ResultArray) res).declaredSize == -1) {
-                            while (iIndex >= ((ResultArray) res).array.size()) {
-                                ((ResultArray) res).array.add(null);
-                            }
-                        }
-                        ResultValue tempRes = expr(false);
-                        ResultValue tempRes2 = ((ResultArray) res).array.get(iIndex);
-                        nOp2 = new Numeric(this, tempRes, "-=", "2nd Operand");
-                        nOp1 = new Numeric(this, tempRes2, "-=", "1st Operand");
-                        tempRes = Utility.subtraction(this, nOp2, nOp1);
-                        resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                        error("Invalid structure type on %s", res.value);
                     }
-                    return resO1;
                 } else {
-                    error("Invalid structure type on %s", res.value);
+                    skipTo(";");
                 }
-            } else {
-                skipTo(";");
-            }
-        } else {
-        error("Expected assignment operator but got %s", scan.currentToken.tokenStr);
+                break;
+            case "-=":
+                if (bExec) {
+                    if (res.structure.equals(Structure.PRIMITIVE)) {
+                        if (!bIndex) {
+                            nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
+                            nOp1 = new Numeric(this, res, "+=", "1st Operand");
+                            ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
+                            resO1 = assign(variableStr, resTemp);
+                            if (scan.currentToken.primClassif != Classif.OPERAND) {
+                                scan.getNext();
+                            }
+                        } else {
+                            resO2 = expr(false);
+                            String strValue = smStorage.getValue(variableStr).value;
+                            if (iIndex == -1) {
+                                iIndex = strValue.length() - 1;
+                            }
+                            if (iIndex > strValue.length() - 1) {
+                                error("Index %s out of bounds", iIndex);
+                            }
+                            String tempValue;
+                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+
+                            ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                            resO1 = assign(variableStr, finalRes);
+                        }
+                        return resO1;
+                    } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                        if (!bIndex) {
+                            error("Can't perform += on array");
+                        } else {
+                            if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                                error("Index %d out of bounds", iIndex);
+                            }
+                            if (iIndex < 0) {
+                                if (((ResultArray) res).declaredSize != -1) {
+                                    iIndex += ((ResultArray) res).declaredSize;
+                                } else {
+                                    iIndex += ((ResultArray) res).lastPopulated;
+                                }
+                            }
+                            if (((ResultArray) res).declaredSize == -1) {
+                                while (iIndex >= ((ResultArray) res).array.size()) {
+                                    ((ResultArray) res).array.add(null);
+                                }
+                            }
+                            ResultValue tempRes = expr(false);
+                            ResultValue tempRes2 = ((ResultArray) res).array.get(iIndex);
+                            nOp2 = new Numeric(this, tempRes, "-=", "2nd Operand");
+                            nOp1 = new Numeric(this, tempRes2, "-=", "1st Operand");
+                            tempRes = Utility.subtraction(this, nOp2, nOp1);
+                            resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                        }
+                        return resO1;
+                    } else {
+                        error("Invalid structure type on %s", res.value);
+                    }
+                } else {
+                    skipTo(";");
+                }
+                break;
+            default:
+                error("Expected assignment operator but got %s", scan.currentToken.tokenStr);
+                break;
         }
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
     private ResultValue expr(Boolean inFunc) throws Exception{
-        Stack outStack = new Stack<ResultValue>();
-        Stack stack = new Stack<Token>();
+        Stack<ResultValue> outStack = new Stack<>();
+        Stack<Token> stack = new Stack<Token>();
         Token popped;
         ResultValue res, resValue1, resValue2;
         boolean bFound;
@@ -571,7 +566,7 @@ public class Parser{
                     bCategory = true;
                     break;
                 case OPERATOR:
-                    if (bCategory == false && !scan.currentToken.tokenStr.equals("-")) {
+                    if (!bCategory && !scan.currentToken.tokenStr.equals("-")) {
                         error("Unexpected operator, instead got: %s", scan.currentToken.tokenStr);
                     }
                     if(scan.currentToken.tokenStr.equals("-")) {
@@ -584,19 +579,16 @@ public class Parser{
                         }
                     } else {
                             while (!stack.empty()) {
-                                if (getPrecedence(scan.currentToken, false) < getPrecedence((Token) stack.peek(), true)) {
+                                if (getPrecedence(scan.currentToken, false) < getPrecedence(stack.peek(), true)) {
                                     break;
                                 } else if (!stack.empty()) {
-                                    popped = (Token) stack.pop();
-                                    resValue1 = (ResultValue) outStack.pop();
+                                    popped = stack.pop();
+                                    resValue1 = outStack.pop();
                                     if (popped.tokenStr.equals("u-")) {
                                         res = evalCond(resValue1, new ResultValue(), "u-");
                                         outStack.push(res);
-                                    } else if (popped.tokenStr.equals("not")) {
-                                        res = evalCond(new ResultValue(), (ResultValue) outStack.pop(), "not");
-                                        outStack.push(res);
                                     } else {
-                                        resValue2 = (ResultValue) outStack.pop();
+                                        resValue2 = outStack.pop();
                                         res = evalCond(resValue1, resValue2, popped.tokenStr);
                                     }
                                     outStack.push(res);
@@ -605,9 +597,8 @@ public class Parser{
                             stack.push(scan.currentToken);
                     }
                     bCategory = false;
-
                 case FUNCTION:
-                    if (bCategory == true) {
+                    if (bCategory) {
                         error("Missing separator, instead got: %s", scan.currentToken.tokenStr);
                     }
                     stack.push(scan.currentToken);
@@ -617,33 +608,30 @@ public class Parser{
                         error("Function statement needs '(' to start with: Func %s", scan.currentToken.tokenStr);
                     }
                     break;
-
                 case SEPARATOR:
                     switch (scan.currentToken.tokenStr) {
-                        case "(":
-                            stack.push(scan.currentToken);
-                            break;
-                        case ")":
+                        case "(" -> stack.push(scan.currentToken);
+                        case ")" -> {
                             if (inFunc && scan.nextToken.tokenStr.equals(";")) {
                                 break;
                             }
                             bFound = false;
                             while (!stack.empty()) {
-                                popped = (Token) stack.pop();
+                                popped = stack.pop();
                                 if (popped.tokenStr.equals("(") || popped.primClassif.equals(Classif.FUNCTION)) {
                                     bFound = true;
                                     if (popped.primClassif.equals(Classif.FUNCTION)) {
-                                        ResultValue tempRes = (ResultValue) outStack.pop();
+                                        ResultValue tempRes = outStack.pop();
                                         outStack.push(builtInFunctions(popped, tempRes));
                                     }
                                     break;
                                 } else if (popped.tokenStr.equals("u-")) {
-                                    resValue1 = (ResultValue) outStack.pop();
+                                    resValue1 = outStack.pop();
                                     res = evalCond(resValue1, new ResultValue(), "u-");
                                     outStack.push(res);
                                 } else {
-                                    resValue1 = (ResultValue) outStack.pop();
-                                    resValue2 = (ResultValue) outStack.pop();
+                                    resValue1 = outStack.pop();
+                                    resValue2 = outStack.pop();
                                     res = evalCond(resValue1, resValue2, popped.tokenStr);
                                     outStack.push(res);
                                 }
@@ -651,7 +639,7 @@ public class Parser{
                             if (!bFound) {
                                 error("Expected left paren");
                             }
-                            break;
+                        }
                     }
             }
             prevToken = scan.currentToken;
@@ -661,32 +649,28 @@ public class Parser{
             error("Missing separator");
         }
         while(!stack.empty()){
-            popped = (Token)stack.pop();
+            popped = stack.pop();
             if(popped.tokenStr.equals("(")) {
                 error("Unmatched right paren");
             }
             else if(popped.tokenStr.equals("u-")) {
-                resValue1 = (ResultValue) outStack.pop();
+                resValue1 = outStack.pop();
                 res = evalCond(resValue1, new ResultValue(), "u-");
                 outStack.push(res);
-            } else if (popped.tokenStr.equals("not")) {
-                res = evalCond(new ResultValue(), (ResultValue) outStack.pop(), "not");
-                outStack.push(res);
-            }
-            else {
+            } else {
                 if(popped.primClassif.equals(Classif.FUNCTION)) {
                     error("Function %s missing right paren", popped.tokenStr);
                 }
-                resValue1 = (ResultValue) outStack.pop();
+                resValue1 = outStack.pop();
                 if(outStack.empty()) {
                     error("Expected operand, instead stack is empty");
                 }
-                resValue2 = (ResultValue) outStack.pop();
+                resValue2 = outStack.pop();
                 res = evalCond(resValue1, resValue2, popped.tokenStr);
                 outStack.push(res);
             }
         }
-        res = (ResultValue) outStack.pop();
+        res = outStack.pop();
         scan.setPosition(prevToken);
         res.terminatingStr = scan.nextToken.tokenStr;
         return res;
@@ -698,59 +682,43 @@ public class Parser{
         Numeric nOp2;
 
         switch (opStr) {
-            case "+":
+            case "+" -> {
                 nOp2 = new Numeric(this, resO2, "+", "2nd operand");
                 nOp1 = new Numeric(this, resO1, "+", "1st operand");
                 res = Utility.addition(this, nOp1, nOp2);
-                break;
-            case "-":
+            }
+            case "-" -> {
                 nOp2 = new Numeric(this, resO2, "-", "2nd operand");
                 nOp1 = new Numeric(this, resO1, "-", "1st operand");
                 res = Utility.subtraction(this, nOp1, nOp2);
-                break;
-            case "*":
+            }
+            case "*" -> {
                 nOp2 = new Numeric(this, resO2, "*", "2nd operand");
                 nOp1 = new Numeric(this, resO1, "*", "1st operand");
                 res = Utility.multiplication(this, nOp1, nOp2);
-                break;
-            case "/":
+            }
+            case "/" -> {
                 nOp2 = new Numeric(this, resO2, "/", "2nd operand");
                 nOp1 = new Numeric(this, resO1, "/", "1st operand");
                 res = Utility.division(this, nOp1, nOp2);
-                break;
-            case "^":
+            }
+            case "^" -> {
                 nOp2 = new Numeric(this, resO2, "^", "2nd operand");
                 nOp1 = new Numeric(this, resO1, "^", "1st operand");
                 res = Utility.exponential(this, nOp1, nOp2);
-                break;
-            case ">":
-                res = Utility.greaterThan(this, resO1, resO2);
-                break;
-            case "<":
-                res = Utility.lessThan(this, resO1, resO2);
-                break;
-            case ">=":
-                res = Utility.greaterThanOrEqual(this, resO1, resO2);
-                break;
-            case "<=":
-                res = Utility.lessThanOrEqual(this, resO1, resO2);
-                break;
-            case "==":
-                res = Utility.equal(this, resO1, resO2);
-                break;
-            case "!=":
-                res = Utility.notEqual(this, resO1, resO2);
-                break;
-            case "u-":
+            }
+            case ">" -> res = Utility.greaterThan(this, resO1, resO2);
+            case "<" -> res = Utility.lessThan(this, resO1, resO2);
+            case ">=" -> res = Utility.greaterThanOrEqual(this, resO1, resO2);
+            case "<=" -> res = Utility.lessThanOrEqual(this, resO1, resO2);
+            case "==" -> res = Utility.equal(this, resO1, resO2);
+            case "!=" -> res = Utility.notEqual(this, resO1, resO2);
+            case "u-" -> {
                 nOp1 = new Numeric(this, resO1, "u-", "Unary Minus");
                 res = Utility.uMinus(this, nOp1);
-                break;
-            case "#":
-                res = Utility.concat(this, resO1, resO2);
-                break;
-            default:
-                error("Bad compare token");
-                break;
+            }
+            case "#" -> res = Utility.concat(this, resO1, resO2);
+            default -> error("Bad compare token");
         }
         return res;
     }
@@ -1283,35 +1251,6 @@ public class Parser{
             error("Expected operand: %s", scan.nextToken.tokenStr);
         }
         return resultArray;
-    }
-
-    public ArrayList<ResultValue> getArray() throws Exception {
-        ResultValue resValue = new ResultValue();
-        ArrayList<ResultValue> resValueList = new ArrayList<>();
-        while (!resValue.terminatingStr.equals(";") && !scan.currentToken.tokenStr.equals(";")){
-            scan.getNext();
-            resValue = expr(false);
-            if(scan.currentToken.subClassif.equals(SubClassif.INTEGER)) {
-                resValue.value = Utility.castInt(this, resValue);
-                resValue.type = SubClassif.INTEGER;
-                resValueList.add(resValue);
-            }
-            else if(scan.currentToken.subClassif.equals(SubClassif.FLOAT)){
-                resValue.value = Utility.castFloat(this, resValue);
-                resValue.type = SubClassif.FLOAT;
-                resValueList.add(resValue);
-            } else if(scan.currentToken.subClassif.equals(SubClassif.BOOLEAN)){
-                resValue.value = Utility.castBoolean(this, resValue);
-                resValue.type = SubClassif.BOOLEAN;
-                resValueList.add(resValue);
-            } else if(scan.currentToken.subClassif.equals(SubClassif.STRING)) {
-                resValue.type = SubClassif.STRING;
-                resValueList.add(resValue);
-            } else {
-                error("Invalid list type: %s", scan.currentToken.tokenStr);
-            }
-        }
-        return resValueList;
     }
 
     public ResultValue getOperand() throws Exception {
