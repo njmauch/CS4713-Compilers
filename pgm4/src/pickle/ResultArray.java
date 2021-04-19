@@ -30,6 +30,11 @@ public class ResultArray extends ResultValue implements Cloneable {
         super(type, value, structure, terminatingStr);
     }
 
+    public ResultArray(ArrayList array, SubClassif type) {
+        this.array = array;
+        this.type = type;
+    }
+
     public ResultArray(){
         super(SubClassif.EMPTY, "", Structure.PRIMITIVE, ";");
         this.value = "";

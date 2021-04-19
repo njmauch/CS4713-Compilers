@@ -22,10 +22,11 @@ public class Pickle
     public static void main(String[] args) throws Exception     {
         SymbolTable symbolTable = new SymbolTable();
         StorageManager storeManager = new StorageManager();
+        Precedence precedence = new Precedence();
         try {
 
             Scanner scan = new Scanner(args[0], symbolTable);
-            Parser parser = new Parser(scan, storeManager, symbolTable);
+            Parser parser = new Parser(scan, storeManager, symbolTable, precedence);
             ResultValue res;
             while (scan.currentToken.primClassif != Classif.EOF) {
                 res = parser.statement(true);

@@ -91,10 +91,10 @@ public class Scanner {
         while (true) {
             if (iColPos + 1 >= textCharM.length) {
                 if (separators.indexOf(textCharM[iColPos]) > -1) {
-                    iSourceLineNr++;
                     nextToken.primClassif = Classif.SEPARATOR;
                     nextToken.tokenStr = new String(textCharM, iColPos, 1);
                     nextToken.iSourceLineNr = iSourceLineNr;
+                    iSourceLineNr++;
                     if (iSourceLineNr < sourceLineM.size()) {
                         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
                     }
@@ -254,10 +254,10 @@ public class Scanner {
         this.iSourceLineNr = token.iSourceLineNr;
         this.iColPos = token.iColPos;
         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
-        currentToken = new Token();
-        nextToken = new Token();
-        this.getNextToken();
+        //currentToken = new Token();
+        //nextToken = new Token();
         //this.getNextToken();
+        this.getNextToken();
     }
     private void createStringToken(Token strToken) throws Exception {
         strToken.primClassif = Classif.OPERAND;

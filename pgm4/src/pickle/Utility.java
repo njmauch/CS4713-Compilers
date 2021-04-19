@@ -8,6 +8,7 @@ public class Utility {
     public static ResultValue addition(Parser parser, Numeric nOp1, Numeric nOp2) throws Exception {
         ResultValue resValue = null;
 
+
         if(nOp1.type == SubClassif.INTEGER) {
             int intResult = nOp1.integerValue + nOp2.integerValue;
             resValue = new ResultValue(nOp1.type, Integer.toString(intResult), Structure.PRIMITIVE);
@@ -450,6 +451,11 @@ public class Utility {
     public static ResultValue MAXELEM(ResultArray array) {
         ResultValue res = null;
         res = new ResultValue(SubClassif.INTEGER, String.valueOf(array.declaredSize), Structure.PRIMITIVE);
+        return res;
+    }
+
+    public static ResultValue concat(Parser parser, ResultValue resO1, ResultValue resO2) {
+        ResultValue res = new ResultValue(SubClassif.STRING, (resO1.value + resO2.value), Structure.PRIMITIVE);
         return res;
     }
 }
