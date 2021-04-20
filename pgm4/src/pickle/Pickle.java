@@ -19,7 +19,8 @@ package pickle;
 
 public class Pickle
 {
-    public static void main(String[] args) throws Exception     {
+    public static void main(String[] args) {
+        //Initialize and start running program
         SymbolTable symbolTable = new SymbolTable();
         StorageManager storeManager = new StorageManager();
         Precedence precedence = new Precedence();

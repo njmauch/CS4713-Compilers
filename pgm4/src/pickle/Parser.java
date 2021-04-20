@@ -17,6 +17,14 @@ public class Parser{
     public boolean bShowStmt;
 
 
+    /**
+     * Parser construct that takes scanner, storageManager, symboltable, and precedence hashmap
+     * this objects are used throughout the parser class
+     * @param scan object that is used to get the next token and navigate through source file
+     * @param storageManager object that contains and declared variables and their values and types
+     * @param symbolTable object that contains the definition for pickle
+     * @param precedence object that contains the precedence of token in stack or as a token
+     */
     Parser(Scanner scan, StorageManager storageManager, SymbolTable symbolTable, Precedence precedence) {
         this.scan = scan;
         this.symbolTable = symbolTable;
@@ -29,27 +37,52 @@ public class Parser{
         this.bShowStmt = false;
     }
 
+    /**
+     * Function that skips to the next instance of tokenStr in the source file
+     * @param tokenStr variable passed in that we skip to until it is found
+     * @throws Exception
+     */
     private void skipTo(String tokenStr) throws Exception {
+        //until tokenStr is found, get the next token
         while (! scan.currentToken.tokenStr.equals(tokenStr) && scan.currentToken.primClassif != Classif.EOF)
             scan.getNext();
     }
 
+    /**
+     * Print error when called. handles various formats of errors
+     * @param fmt
+     * @param varArgs
+     * @throws Exception
+     */
     public void error(String fmt, Object... varArgs) throws Exception
     {
         String diagnosticTxt = String.format(fmt, varArgs);
         throw new ParserException(Scanner.iSourceLineNr, diagnosticTxt, this.sourceFileNm);
     }
 
+    /**
+     * Function that is beginning of parsing through source file.  Based on type of token that
+     * is given from scanner, will decide what to do with that token and that line of code
+     * in pickle
+     * @param bExec boolean to decide if certain code is to be executed or to be skipped
+     * @return
+     * @throws Exception
+     */
     public ResultValue statement (boolean bExec) throws Exception {
+        //get the next token
         scan.getNext();
 
+        //if end of file, return void ResultValue and end parsing the source file
         if(scan.currentToken.primClassif.equals(Classif.EOF)) {
             return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, "");
         }
+        //if not EOF, then token is CONTROL/OPERAND/FUNCTION
         else if(scan.currentToken.primClassif.equals(Classif.CONTROL)) {
+            //if Primary class is control and sub class is Declare so call declareStmt function
             if(scan.currentToken.subClassif.equals(SubClassif.DECLARE)) {
                 return declareStmt(bExec);
             }
+            //Primary class is CONTROL, and sub class is FLOW, determine if 'if', 'while' or 'for' statement
             else if(scan.currentToken.subClassif.equals(SubClassif.FLOW)) {
                 switch (scan.currentToken.tokenStr) {
                     case "if":
@@ -60,52 +93,84 @@ public class Parser{
                         return forStmt(bExec);
                 }
             }
+            //is an end token (endif, endfor, endwhile) so break out and go to next token if exist
             else if(scan.currentToken.subClassif.equals(SubClassif.END)) {
                 return new ResultValue(SubClassif.END, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
             }
+            //something went wrong if we get this
             else {
                 error("Invalid control variable %s", scan.currentToken.tokenStr);
             }
         }
+        //if token is operand, assign the token and call asssignmentStmt
         else if(scan.currentToken.primClassif.equals(Classif.OPERAND)) {
             return assignmentStmt(bExec);
         }
+        //Token is function, go to functionStmt method to determine what kind of function
         else if(scan.currentToken.primClassif.equals(Classif.FUNCTION)) {
             return functionStmt(bExec);
         }
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
+    /**
+     * This method is utilized by ifStmt, whileStmt, and forStmt
+     * It executes from current position all the way up to the terminating str
+     * @param bExec boolean to decide if section of code is executed or skipped
+     * @param termStr token that we loop through till found
+     * @return
+     * @throws Exception
+     */
     public ResultValue statements(Boolean bExec, String termStr) throws Exception {
+        //execute first statement
         ResultValue res = statement(bExec);
+        //loop through source file until we reach the terminating string
         while(! termStr.contains(res.terminatingStr)) {
+            //execute next statement
             res = statement(bExec);
         }
         return res;
     }
 
+    /**
+     * This method is to run any builtin functions in pickle.  Currently implemented built in
+     * functions include, print(), LENGTH(), SPACES(), ELEM(), MAXELEM();
+     *
+     * @param bExec decides if code is being executed or being skipped
+     * @return
+     * @throws Exception
+     */
     private ResultValue functionStmt (boolean bExec) throws Exception {
         ResultValue res = null;
+        //Checks if built in function, there is possibility of user defined but not implemented in current state
         if(scan.currentToken.subClassif == SubClassif.BUILTIN) {
+            //if bExec is false, skip code
             if(!bExec) {
                 skipTo(";");
                 res = new ResultValue(SubClassif.BUILTIN, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
             }
+            //we are executing function
+            //print function, call print method to print statement
             else if(scan.currentToken.tokenStr.equals("print")) {
                 res = print();
             }
+            //LENGTH function, gets the length of the current token
             else if(scan.currentToken.tokenStr.equals("LENGTH")) {
                 res = Utility.LENGTH(scan.currentToken.tokenStr);
             }
+            //SPACES function, returns T or F if token is only spaces
             else if(scan.currentToken.tokenStr.equals("SPACES")) {
                 res = Utility.SPACES(scan.currentToken.tokenStr);
             }
+            //ELEM function, finds subscript of highest populated element + 1
             else if(scan.currentToken.tokenStr.equals("ELEM")) {
                 res = Utility.ELEM(this, (ResultArray)smStorage.getValue(scan.currentToken.tokenStr));
             }
+            //MAX ELEM function, finds declared number of elements in array
             else if(scan.currentToken.tokenStr.equals("MAXELEM")) {
                 res = Utility.MAXELEM((ResultArray)smStorage.getValue(scan.currentToken.tokenStr));
             }
+            //function was called but is not a built in or defined function
             else {
                 error("No function found with name %s", scan.currentToken.tokenStr);
             }
@@ -113,55 +178,86 @@ public class Parser{
         return res;
     }
 
+    /**
+     * Print function, prints statement to the screen
+     * @return
+     * @throws Exception
+     */
     private ResultValue print() throws Exception {
+        //get the name of the function in case of error
         String funcName = scan.currentToken.tokenStr;
         ResultValue res = null;
+        //start building string to be printed to screen
         String line = "";
         Token prevToken = null;
+        //start building the string
         while(!scan.currentToken.tokenStr.equals(";")) {
             res = expr(true);
+            //add the value returned from expr to the string
             line = res.value + " ";
             prevToken = scan.currentToken;
+            //get next token
             scan.getNext();
             while (scan.currentToken.tokenStr.equals(")")) {
                 scan.getNext();
             }
+            //if we reached end of file, then something went wrong
             if (scan.currentToken.primClassif.equals(Classif.EOF)) {
                 error("Missing ';'");
             }
+            //The end of the line should be ended by a separator
             if (scan.currentToken.primClassif != Classif.SEPARATOR) {
                 error("Missing separator");
             }
         }
-        /*if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
+        if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
             error("Func %s missing closing paren", funcName);
-        }*/
+        }
+        //print out the line
         System.out.println(line);
         return res;
     }
 
+    /**
+     * whileStmt Function executes while statements in pickle
+     * @param bExec decides if statements are to be executed or skipped
+     * @return
+     * @throws Exception
+     */
     private ResultValue whileStmt(boolean bExec) throws Exception {
         ResultValue res;
         Token tempToken;
 
+        //temp token used to go back to top of while loop to check if condition is still true
         tempToken = scan.currentToken;
+        //true, so we are executing statements inside while
         if (bExec) {
+            //evaluate expression, determine if condition is true or false
             ResultValue resCond = expr(false);
+            //if condition returned true, execute statements
             while(resCond.value.equals("T")) {
+                //run through the statements inside the while loop until "endwhile" is found
                 res = statements(true, "endwhile");
+                //if endwhile is not found then print error
                 if(! res.terminatingStr.equals("endwhile")){
                     error("Expected endwhile for while beggining line %s, got %s", tempToken.iSourceLineNr, res.value);
                 }
+                //go back to beginning of while to recheck condition statement
                 scan.setPosition(tempToken);
+                //get next token
                 scan.getNext();
+                //evaluate condition again to determine if we execute while loop again
                 resCond = expr(false);
             }
+            //condition returned false so skip ahead to endwhile
             res = statements(false, "endwhile");
         }
+        //we were told to ignore execution so we skip condition and then skip to endwhile
         else {
             skipTo(":");
             res = statements(false, "endwhile");
         }
+        //checks to make sure that while statement ends in 'endwhile;'
         if(! res.terminatingStr.equals("endwhile")) {
             error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
         }
@@ -171,12 +267,22 @@ public class Parser{
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
     }
 
+    /**
+     * declareStmt function called when a control declare token is encountered
+     * it uses a switch statement to determine type of subclass and assigns it
+     * to the next token found as it is the variable name
+     * Can also assign a value to declared variable if '=' is found
+     * @param bExec boolean to decide if we execute or not
+     * @return
+     * @throws Exception
+     */
     private ResultValue declareStmt(boolean bExec) throws Exception {
-        ResultValue res;
+        //default set structure type to primitive
         Structure structure = Structure.PRIMITIVE;
 
         SubClassif dclType = SubClassif.EMPTY;
 
+        //determine what kind of variable is being declared in the source file
         switch (scan.currentToken.tokenStr) {
             case "Int" -> dclType = SubClassif.INTEGER;
             case "Float" -> dclType = SubClassif.FLOAT;
@@ -184,45 +290,70 @@ public class Parser{
             case "Bool" -> dclType = SubClassif.BOOLEAN;
             default -> error("Unknown declare type %s", scan.currentToken.tokenStr);
         }
+        // get the variable name from source file
         scan.getNext();
 
+        //ensure that the next token is a variable name
         if((scan.currentToken.primClassif != Classif.OPERAND) || (scan.currentToken.subClassif != SubClassif.IDENTIFIER))  {
             error("Expected variable for target %s", scan.currentToken.tokenStr);
         }
 
+        //get the name of the variable
         String variableStr = scan.currentToken.tokenStr;
-        res = new ResultValue(dclType, variableStr, structure);
 
+        //we are executing
         if(bExec) {
-
+            //token used to skip to in arrays for assignment
             Token tempToken = scan.currentToken;
+            //check if the variable is an array
             if (scan.nextToken.tokenStr.equals("[")) {
+                //advance token to the left bracket
                 scan.getNext();
 
+                //set structure to fixed array
                 structure = Structure.FIXED_ARRAY;
+                //if declare statment is var[] then length of array is not declared
                 if (scan.nextToken.tokenStr.equals("]")) {
+                    //advance token to right bracket
                     scan.getNext();
+                    //array can not be declared without either size or list of values
                     if (scan.nextToken.tokenStr.equals(";")) {
                         error("Can't declare array without length");
-                    } else if (scan.nextToken.tokenStr.equals("=")) {
+                    }
+                    //we are assigning values to array so insert into symbol table and storage manager
+                    else if (scan.nextToken.tokenStr.equals("=")) {
+                        //advance the token to the '='
                         scan.getNext();
+                        //insert array into the symbol table
                         symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr
                                 , tempToken.primClassif, tempToken.subClassif, dclType, structure));
+                        //insert array into storage manager
                         smStorage.insertValue(variableStr, new ResultArray(tempToken.tokenStr, dclType, structure));
+                        //call declare array to get the values of the array being declared
                         return declareArray(bExec, variableStr, dclType, 0);
-                    } else {
+                    }
+                    //we found something we aren't supposed to
+                    else {
                         error("Invalid symbol: %s", scan.nextToken.tokenStr);
                     }
-                } else if (scan.nextToken.primClassif != Classif.OPERATOR) {
+                }
+                //the size of array is declared
+                else if (scan.nextToken.primClassif != Classif.OPERATOR) {
+                    //if we encounter a variable used to declare size, ensure that variable value is declared
                     if (scan.nextToken.subClassif.equals(SubClassif.IDENTIFIER)) {
                         if (smStorage.getValue(scan.nextToken.tokenStr) == null) {
                             error("%s is not defined", scan.nextToken.tokenStr);
                         }
                     }
+                    //save the left bracket
                     Token leftToken = scan.currentToken;
+                    //checking for right bracket
                     skipTo("]");
+                    //go back to the left bracket
                     scan.setPosition(leftToken);
+                    //use expression to find the length of the array
                     int dclLength = Integer.parseInt(Utility.castInt(this, expr(false)));
+                    //if length is negative, throw error
                     if (dclLength < 0) {
                         error("Array size must be positive");
                     }
@@ -230,69 +361,104 @@ public class Parser{
                     scan.getNext();
                     //get = or ;
                     scan.getNext();
+                    //list of values not given for array but array is still declared
                     if (scan.currentToken.tokenStr.equals(";")) {
+                        //put the new array in the symbol table
                         symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, tempToken.primClassif, tempToken.subClassif, dclType, Structure.FIXED_ARRAY));
+                        //create the an array of null values based on length declared for array
                         ArrayList<ResultValue> tempArrayList = new ArrayList<>();
                         for (int j = 0; j < dclLength; j++) {
                             tempArrayList.add(null);
                         }
+                        //insert the new array into the storagemanager
                         smStorage.insertValue(variableStr, new ResultArray(tempToken.tokenStr, tempArrayList, dclType, structure, 0, dclLength));
                         return new ResultValue(SubClassif.DECLARE, "", Structure.FIXED_ARRAY, scan.currentToken.tokenStr);
-                    } else if (scan.currentToken.tokenStr.equals("=")) {
+                    }
+                    //list of values is given for the array to call function declareArray
+                    else if (scan.currentToken.tokenStr.equals("=")) {
+                        //insert the array into the symbol table
                         symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr, tempToken.primClassif, tempToken.subClassif, dclType, Structure.FIXED_ARRAY));
+                        //create a temporary array of null values to be able to insert into storage manager
                         ArrayList<ResultValue> tempArrayList = new ArrayList<>();
                         for (int j = 0; j < dclLength; j++) {
                             tempArrayList.add(null);
                         }
+                        //insert into storagemanager
                         smStorage.insertValue(variableStr, new ResultArray(tempToken.tokenStr, tempArrayList, dclType, structure, 0, dclLength));
+                        //call on declare array to populate the list of values
                         return declareArray(bExec, variableStr, dclType, dclLength);
-                    } else {
+                    }
+                    //found something bad
+                    else {
                         error("Expected = or ; and got: %s", scan.currentToken.tokenStr);
                     }
                 } else {
                     error("Invalid length: %s", scan.nextToken.tokenStr);
                 }
-            } else {
+            }
+            //we are not declaring an array
+            else {
+                //we found a right bracket so bad syntax in source file
                 if (scan.nextToken.tokenStr.equals("]")) {
                     error("Missing [ with ]");
                 }
+                //put the variable into the symbol table
                 symbolTable.putSymbol(variableStr, new SymbolTable.STIdentifier(variableStr,
                         scan.currentToken.primClassif, scan.currentToken.subClassif, dclType, structure));
+                //put the varibale into the storage manager
                 smStorage.insertValue(variableStr, new ResultValue(dclType, "", structure));
             }
         }
+        //if '=' is found, call on assignmentStmt to assign variable
         if(scan.nextToken.tokenStr.equals("=")) {
             return assignmentStmt(bExec);
         }
+        //we encountered an array
         else if(scan.nextToken.tokenStr.equals("[")){
+            //advance to the left bracket
             scan.getNext();
+            //setting structure as fixed array
             structure = Structure.FIXED_ARRAY;
+            //check if size is declared
             if (scan.nextToken.tokenStr.equals("]")) {
+                //size isn't declared so get the right bracket
                 scan.getNext();
 
+                //can't declare array without size or list of values
                 if (scan.nextToken.tokenStr.equals(";"))
                     error("Can't declare array without length");
+                //we are setting values to the array
                 else if (scan.nextToken.tokenStr.equals("="))
                 {
+                    //get the '=' token
                     scan.getNext();
+                    //call declareArray to fill the values into the array
                     return declareArray(bExec, variableStr, dclType, 0);
                 }
+                //got something wrong
                 else
                     error("Expected = or ; and got: %s", scan.nextToken.tokenStr);
             }
+            //length of the array is given so get the length
             int length = Integer.parseInt(Utility.castInt(this, expr(false)));
+            //if the length is negative, throw error
             if (length < 0) {
                 error("Array size must be positive");
             }
 
+            //advance to right bracket
             scan.getNext();
+            //advance to either ';' or '='
             scan.getNext();
+            //values not given for array but we are still declaring the array
             if (scan.currentToken.tokenStr.equals(";")) {
                 return new ResultValue(SubClassif.DECLARE, "", Structure.FIXED_ARRAY, scan.currentToken.tokenStr);
             }
+            //list of values was given so we use declareArray to set the array values
             else if (scan.currentToken.tokenStr.equals("=")) {
                 return declareArray(bExec, variableStr, dclType, length);
             }
+            //we got something wrong
             else {
                 error("Expected = or ; and got: %s", scan.nextToken.tokenStr);
             }
@@ -300,22 +466,32 @@ public class Parser{
         else if (scan.nextToken.primClassif == Classif.OPERATOR) {
             error("Can't perform declare before being initialized: %s", scan.nextToken.tokenStr);
         }
+        //check for terminating ; on the statement
         else if(! scan.getNext().equals(";")) {
             error("Declare statment not terminated");
         }
         return new ResultValue(SubClassif.DECLARE,"",  Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
+    /**
+     * assignmentStmt is called whenever we encounter an '='.  Determines the value
+     * of the expression after the '=' and assign it to the variable
+     * also handles '+=' and '-='
+     * @param bExec decides if we are executing or not
+     * @return
+     * @throws Exception
+     */
     public ResultValue assignmentStmt(boolean bExec) throws Exception {
         ResultValue res;
         SubClassif type = SubClassif.EMPTY;
         Numeric nOp2;
         Numeric nOp1;
         int iIndex = 0;
-        int iIndex2 = 0;
         boolean bIndex = false;
         ResultValue resO2;
         ResultValue resO1 = null;
+        //if we are executing, get the data type of the variable as well as determing if
+        //variable is declared
         if(bExec) {
             try{
                 type = smStorage.getValue(scan.currentToken.tokenStr).type;
@@ -324,80 +500,103 @@ public class Parser{
                 error("Variable has not yet been declared: %s", scan.currentToken.tokenStr);
             }
         }
+        //make sure the token is a variable that can be assigned a value
         if(scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
             error("Expected a variable for the target assignment %s", scan.currentToken.tokenStr);
         }
+        //get the name of the variable
         String variableStr = scan.currentToken.tokenStr;
+        //get the value of the variable from storagemanager
         res = smStorage.getValue(variableStr);
-        scan.getNext();
+
+        //ensure that the variable has been declared
         if(res == null && bExec){
             error("%s required to be declared", variableStr);
         }
-
+        //advance token to either right bracket, '=', '-=', or '+='
+        scan.getNext();
+        //if we encountered array, get the index value given for assignment
         if(scan.currentToken.tokenStr.equals("[")){
+            //get the index value inside brackets
             iIndex = Integer.parseInt(Utility.castInt(this, expr(false)));
+            //advance to right bracket
             scan.getNext();
+            //advance to operator
             scan.getNext();
+            //boolean used to say we are assigning value to index of array
             bIndex = true;
         }
 
+        //ensuring token is operator
         if(scan.currentToken.primClassif != Classif.OPERATOR) {
             error("Expected operator but got: %s", scan.currentToken.tokenStr);
         }
 
+        //finding out what kind of operation is being performed
         switch (scan.currentToken.tokenStr) {
+            //assigning value
             case "=":
+                //we are executing
                 if (bExec) {
-                    if (res.structure.equals(Structure.PRIMITIVE)) {
-                        if (!bIndex) {
-                            resO1 = assign(variableStr, expr(false));
-                            if (scan.currentToken.primClassif != Classif.OPERAND) {
-                                scan.getNext();
+                    //get the structure or the variable
+                    switch (res.structure) {
+                        //not an array so we do a simple assignment
+                        case PRIMITIVE -> {
+                            if (!bIndex) {
+                                //call assign to assign the result from the expresion after = to the variable
+                                resO1 = assign(variableStr, expr(false));
+                                if (scan.currentToken.primClassif != Classif.OPERAND) {
+                                    scan.getNext();
+                                }
                             }
-                        } else {
-                            resO2 = expr(false);
-                            String strValue = smStorage.getValue(variableStr).value;
-                            if (iIndex == -1) {
-                                iIndex = strValue.length() - 1;
-                            }
-                            if (iIndex > strValue.length() - 1) {
-                                error("Index %s out of bounds", iIndex);
-                            }
-                            String tempValue;
-                            if (iIndex2 == 0) {
+                            //we have encountered changing a string
+                            else {
+                                //get the substring that is going into the current string
+                                resO2 = expr(false);
+                                //get the current value of the variable that is being changed
+                                String strValue = smStorage.getValue(variableStr).value;
+                                if (iIndex == -1) {
+                                    iIndex = strValue.length() - 1;
+                                }
+                                if (iIndex > strValue.length() - 1) {
+                                    error("Index %s out of bounds", iIndex);
+                                }
+                                //temp string that has index being updated
+                                String tempValue;
+                                //insert old string up to index, replace index value with given value (resO2), then fill rest of string with rest of old string
                                 tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                                //create new ResultValue with new string
+                                ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
+                                //assign new result to the already existing variable
+                                resO1 = assign(variableStr, finalRes);
+                            }
+                            return resO1;
+                        }
+                        case FIXED_ARRAY, UNBOUNDED_ARRAY -> {
+                            if (!bIndex) {
+                                resO1 = assignArrayStmt(variableStr, type, ((ResultArray) res).declaredSize);
                             } else {
-                                tempValue = strValue.substring(0, iIndex) + resO2.value;
-                            }
-                            ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
-                            resO1 = assign(variableStr, finalRes);
-                        }
-                        return resO1;
-                    } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
-                        if (bIndex == false) {
-                            resO1 = assignArrayStmt(variableStr, type, ((ResultArray) res).declaredSize);
-                        } else {
-                            if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
-                                error("Index %d out of bounds", iIndex);
-                            }
-                            if (iIndex < 0) {
-                                if (((ResultArray) res).declaredSize != -1) {
-                                    iIndex += ((ResultArray) res).declaredSize;
-                                } else {
-                                    iIndex += ((ResultArray) res).lastPopulated;
+                                if (res.structure != Structure.UNBOUNDED_ARRAY && iIndex >= ((ResultArray) res).declaredSize) {
+                                    error("Index %d out of bounds", iIndex);
                                 }
-                            }
-                            if (((ResultArray) res).declaredSize == -1) {
-                                while (iIndex >= ((ResultArray) res).array.size()) {
-                                    ((ResultArray) res).array.add(null);
+                                if (iIndex < 0) {
+                                    if (((ResultArray) res).declaredSize != -1) {
+                                        iIndex += ((ResultArray) res).declaredSize;
+                                    } else {
+                                        iIndex += ((ResultArray) res).lastPopulated;
+                                    }
                                 }
+                                if (((ResultArray) res).declaredSize == -1) {
+                                    while (iIndex >= ((ResultArray) res).array.size()) {
+                                        ((ResultArray) res).array.add(null);
+                                    }
+                                }
+                                ResultValue tempRes = expr(false);
+                                resO1 = assignIndex(variableStr, type, iIndex, tempRes);
                             }
-                            ResultValue tempRes = expr(false);
-                            resO1 = assignIndex(variableStr, type, iIndex, tempRes);
+                            return resO1;
                         }
-                        return resO1;
-                    } else {
-                        error("Invalid structure type on %s", res.value);
+                        default -> error("Invalid structure type on %s", res.value);
                     }
                 } else {
                     skipTo(";");
@@ -548,7 +747,7 @@ public class Parser{
         if(scan.currentToken.primClassif != Classif.FUNCTION || scan.currentToken.tokenStr.equals("print")){
             scan.getNext();
         }
-        Token prevToken = scan.nextToken;
+        Token prevToken = scan.currentToken;
         while(scan.currentToken.primClassif.equals(Classif.OPERAND)
                 || scan.currentToken.primClassif.equals(Classif.OPERATOR)
                 || scan.currentToken.primClassif.equals(Classif.FUNCTION)
@@ -1256,8 +1455,7 @@ public class Parser{
     public ResultValue getOperand() throws Exception {
         Token op = scan.currentToken;
         ResultValue resultValue1;
-        ResultValue index = null;
-        ResultValue index2 = null;
+        ResultValue index;
         if(op.subClassif.equals(SubClassif.IDENTIFIER)) {
             resultValue1 = smStorage.getValue(op.tokenStr);
             if (resultValue1 == null) {
@@ -1281,34 +1479,32 @@ public class Parser{
             index = expr(false);
             scan.getNext();
             if(tempRes.structure != Structure.PRIMITIVE) {
-                if(index2 == null) {
-                    ResultArray resultArray1 = (ResultArray) smStorage.getValue(value);
-                    if(resultArray1 == null){
-                        error("Variable has not been yet declared: %s", op.tokenStr);
-                    }
-                    int iIndex = Integer.parseInt(Utility.castInt(this, index));
-                    if(iIndex < 0) {
-                        if(resultArray1.declaredSize != -1) {
-                            iIndex += ((ResultArray) resultArray1).declaredSize;
-                        }
-                        else {
-                            iIndex += resultArray1.lastPopulated;
-                        }
-                    }
-                    if(resultArray1.declaredSize != -1 && iIndex >= resultArray1.declaredSize) {
-                        error("Trying to reference an index outside of bounds of array");
-                    }
-                    else if(resultArray1.declaredSize == -1 && resultArray1.array.get(iIndex) == null) {
-                        error("Index %d has not been initialized", iIndex);
-                    }
-                    else if(resultArray1.array.get(iIndex) == null) {
-                        error("Index %d has not been initialized", iIndex);
-                    }
-                    resultValue1 = resultArray1.array.get(iIndex);
+                ResultArray resultArray1 = (ResultArray) smStorage.getValue(value);
+                if(resultArray1 == null){
+                    error("Variable has not been yet declared: %s", op.tokenStr);
                 }
+                int iIndex = Integer.parseInt(Utility.castInt(this, index));
+                if(iIndex < 0) {
+                    if(resultArray1.declaredSize != -1) {
+                        iIndex += ((ResultArray) resultArray1).declaredSize;
+                    }
+                    else {
+                        iIndex += resultArray1.lastPopulated;
+                    }
+                }
+                if(resultArray1.declaredSize != -1 && iIndex >= resultArray1.declaredSize) {
+                    error("Trying to reference an index outside of bounds of array");
+                }
+                else if(resultArray1.declaredSize == -1 && resultArray1.array.get(iIndex) == null) {
+                    error("Index %d has not been initialized", iIndex);
+                }
+                else if(resultArray1.array.get(iIndex) == null) {
+                    error("Index %d has not been initialized", iIndex);
+                }
+                resultValue1 = resultArray1.array.get(iIndex);
             }
             else {
-                if(index2 == null) {
+                {
                     resultValue1 = smStorage.getValue(value);
                     if(resultValue1 == null){
                         error("Variable has not been yet declared: %s", op.tokenStr);
@@ -1326,12 +1522,6 @@ public class Parser{
                     char ch = strVal.charAt((Integer.parseInt(Utility.castInt(this, index))));
                     resultValue1 = new ResultValue(SubClassif.STRING, String.valueOf(ch));
                 }
-                else {
-                    resultValue1 = smStorage.getValue(value);
-                    String strVal = resultValue1.value;
-                    strVal = strVal.substring((Integer.parseInt(Utility.castInt(this, index))), (Integer.parseInt(Utility.castInt(this, index2))));
-                    resultValue1 = new ResultValue(SubClassif.STRING, strVal);
-                }
             }
         }
         return resultValue1;
@@ -1341,19 +1531,17 @@ public class Parser{
         ResultValue res = null;
         String value = "";
         SubClassif type = SubClassif.BUILTIN;
-        if(funcName.tokenStr.equals("LENGTH")) {
-            res = Utility.LENGTH(parm.value);
-        }
-        else if(funcName.tokenStr.equals("SPACES")) {
-            res = Utility.SPACES(parm.value);
-        }
-        else if(funcName.tokenStr.equals("ELEM")) {
-            ResultArray array = (ResultArray) parm;
-            res = Utility.ELEM(this, array);
-        }
-        else if(funcName.tokenStr.equals("MAXELEM")) {
-            ResultArray array = (ResultArray) parm;
-            res = Utility.MAXELEM(array);
+        switch (funcName.tokenStr) {
+            case "LENGTH" -> res = Utility.LENGTH(parm.value);
+            case "SPACES" -> res = Utility.SPACES(parm.value);
+            case "ELEM" -> {
+                ResultArray array = (ResultArray) parm;
+                res = Utility.ELEM(this, array);
+            }
+            case "MAXELEM" -> {
+                ResultArray array = (ResultArray) parm;
+                res = Utility.MAXELEM(array);
+            }
         }
         return res;
     }
