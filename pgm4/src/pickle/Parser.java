@@ -125,7 +125,7 @@ public class Parser{
         //execute first statement
         ResultValue res = statement(bExec);
         //loop through source file until we reach the terminating string
-        while(! termStr.contains(res.terminatingStr) || res.terminatingStr.equals("for")) {
+        while(! termStr.contains(res.terminatingStr)) {
             //execute next statement
             res = statement(bExec);
         }
@@ -183,7 +183,19 @@ public class Parser{
         while(!scan.currentToken.tokenStr.equals(";")) {
             res = expr(true);
             //add the value returned from expr to the string
-            line += res.value + " ";
+            if(res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
+                ResultArray array = (ResultArray)smStorage.getValue(res.value);
+                ArrayList<ResultValue> resultList = array.array;
+                for(ResultValue resTemp : resultList) {
+                    if(resTemp == null){
+                        continue;
+                    }
+                    line += resTemp.value + " ";
+                }
+            }
+            else {
+                line += res.value + " ";
+            }
             prevToken = scan.currentToken;
             //get next token
             scan.getNext();
@@ -774,9 +786,9 @@ public class Parser{
                                 error("Unexpected operator, instead got: %s", scan.nextToken.tokenStr);
                             }
                         }
-                    } else {
+                     else {
                             while (!stack.empty()) {
-                                if (getPrecedence(scan.currentToken, false) > getPrecedence((Token)stack.peek(), true)) {
+                                if (getPrecedence(scan.currentToken, false) > getPrecedence((Token) stack.peek(), true)) {
                                     break;
                                 } else if (!stack.empty()) {
                                     popped = stack.pop();
@@ -792,6 +804,7 @@ public class Parser{
                                 }
                             }
                             stack.push(scan.currentToken);
+                        }
                     }
                     bCategory = false;
                     break;
@@ -878,7 +891,7 @@ public class Parser{
      *
      * @param resO1 first operand
      * @param resO2 second operand
-     * @param opStr
+     * @param opStr operation to be performed with the first and second operand, or possibly just first operand
      * @return
      * @throws Exception
      */
@@ -1368,7 +1381,7 @@ public class Parser{
             else if(resultValue.structure == Structure.FIXED_ARRAY || resultValue.structure == Structure.UNBOUNDED_ARRAY) {
                 ResultArray resultArray2 = (ResultArray) resultValue;
                 int iDclLength = resultArray1.declaredSize;
-                int iPopLength = resultArray2.declaredSize;
+                int iPopLength = resultArray2.lastPopulated + 1;
 
                 if(declared != -1 && iDclLength < iPopLength) {
                     iPopLength = iDclLength;

@@ -119,7 +119,9 @@ public class Scanner {
                     iColPos++;
                 } else if (((iColPos + 1) < textCharM.length) && (textCharM[iColPos] == '/') && (textCharM[iColPos + 1] == '/')) {
                     iSourceLineNr++;
-                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    if (iSourceLineNr < sourceLineM.size()) {
+                        textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                    }
                     iColPos = 0;
                     getNextToken();
                     return;
