@@ -40,7 +40,7 @@ public class Parser{
     /**
      * Function that skips to the next instance of tokenStr in the source file
      * @param tokenStr variable passed in that we skip to until it is found
-     * @throws Exception
+     * @throws Exception general error
      */
     private void skipTo(String tokenStr) throws Exception {
         //until tokenStr is found, get the next token
@@ -50,9 +50,9 @@ public class Parser{
 
     /**
      * Print error when called. handles various formats of errors
-     * @param fmt
-     * @param varArgs
-     * @throws Exception
+     * @param fmt string that contains the error message and variable
+     * @param varArgs variable number of arguments used in the string
+     * @throws Exception generic exception
      */
     public void error(String fmt, Object... varArgs) throws Exception
     {
@@ -66,7 +66,7 @@ public class Parser{
      * in pickle
      * @param bExec boolean to decide if certain code is to be executed or to be skipped
      * @return
-     * @throws Exception
+     * @throws Exception generic exception
      */
     public ResultValue statement (boolean bExec) throws Exception {
         //get the next token
@@ -125,7 +125,7 @@ public class Parser{
         //execute first statement
         ResultValue res = statement(bExec);
         //loop through source file until we reach the terminating string
-        while(! termStr.contains(res.terminatingStr)) {
+        while(! termStr.contains(res.terminatingStr) || res.terminatingStr.equals("for")) {
             //execute next statement
             res = statement(bExec);
         }
@@ -154,21 +154,10 @@ public class Parser{
             else if(scan.currentToken.tokenStr.equals("print")) {
                 res = print();
             }
-            //LENGTH function, gets the length of the current token
-            else if(scan.currentToken.tokenStr.equals("LENGTH")) {
-                res = Utility.LENGTH(scan.currentToken.tokenStr);
-            }
-            //SPACES function, returns T or F if token is only spaces
-            else if(scan.currentToken.tokenStr.equals("SPACES")) {
-                res = Utility.SPACES(scan.currentToken.tokenStr);
-            }
-            //ELEM function, finds subscript of highest populated element + 1
-            else if(scan.currentToken.tokenStr.equals("ELEM")) {
-                res = Utility.ELEM(this, (ResultArray)smStorage.getValue(scan.currentToken.tokenStr));
-            }
-            //MAX ELEM function, finds declared number of elements in array
-            else if(scan.currentToken.tokenStr.equals("MAXELEM")) {
-                res = Utility.MAXELEM((ResultArray)smStorage.getValue(scan.currentToken.tokenStr));
+            //
+            else if(scan.currentToken.tokenStr.equals("SPACES") || scan.currentToken.tokenStr.equals("ELEM")
+                || scan.currentToken.tokenStr.equals("MAXELEM") || scan.currentToken.tokenStr.equals("LENGTH")) {
+                res = expr(false);
             }
             //function was called but is not a built in or defined function
             else {
@@ -194,7 +183,7 @@ public class Parser{
         while(!scan.currentToken.tokenStr.equals(";")) {
             res = expr(true);
             //add the value returned from expr to the string
-            line = res.value + " ";
+            line += res.value + " ";
             prevToken = scan.currentToken;
             //get next token
             scan.getNext();
@@ -598,10 +587,13 @@ public class Parser{
                         }
                         default -> error("Invalid structure type on %s", res.value);
                     }
-                } else {
+                }
+                //not executing
+                else {
                     skipTo(";");
                 }
                 break;
+            //encountered an assign with addition
             case "+=":
                 if (bExec) {
                     if (res.structure.equals(Structure.PRIMITIVE)) {
@@ -730,9 +722,15 @@ public class Parser{
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
+    /**
+     *
+     * @param inFunc
+     * @return
+     * @throws Exception
+     */
     private ResultValue expr(Boolean inFunc) throws Exception{
         Stack<ResultValue> outStack = new Stack<>();
-        Stack<Token> stack = new Stack<Token>();
+        Stack<Token> stack = new Stack<>();
         Token popped;
         ResultValue res, resValue1, resValue2;
         boolean bFound;
@@ -778,7 +776,7 @@ public class Parser{
                         }
                     } else {
                             while (!stack.empty()) {
-                                if (getPrecedence(scan.currentToken, false) < getPrecedence(stack.peek(), true)) {
+                                if (getPrecedence(scan.currentToken, false) > getPrecedence((Token)stack.peek(), true)) {
                                     break;
                                 } else if (!stack.empty()) {
                                     popped = stack.pop();
@@ -788,7 +786,7 @@ public class Parser{
                                         outStack.push(res);
                                     } else {
                                         resValue2 = outStack.pop();
-                                        res = evalCond(resValue1, resValue2, popped.tokenStr);
+                                        res = evalCond(resValue2, resValue1, popped.tokenStr);
                                     }
                                     outStack.push(res);
                                 }
@@ -796,6 +794,7 @@ public class Parser{
                             stack.push(scan.currentToken);
                     }
                     bCategory = false;
+                    break;
                 case FUNCTION:
                     if (bCategory) {
                         error("Missing separator, instead got: %s", scan.currentToken.tokenStr);
@@ -831,7 +830,7 @@ public class Parser{
                                 } else {
                                     resValue1 = outStack.pop();
                                     resValue2 = outStack.pop();
-                                    res = evalCond(resValue1, resValue2, popped.tokenStr);
+                                    res = evalCond(resValue2, resValue1, popped.tokenStr);
                                     outStack.push(res);
                                 }
                             }
@@ -865,7 +864,7 @@ public class Parser{
                     error("Expected operand, instead stack is empty");
                 }
                 resValue2 = outStack.pop();
-                res = evalCond(resValue1, resValue2, popped.tokenStr);
+                res = evalCond(resValue2, resValue1, popped.tokenStr);
                 outStack.push(res);
             }
         }
@@ -875,6 +874,14 @@ public class Parser{
         return res;
     }
 
+    /**
+     *
+     * @param resO1 first operand
+     * @param resO2 second operand
+     * @param opStr
+     * @return
+     * @throws Exception
+     */
     private ResultValue evalCond(ResultValue resO1, ResultValue resO2, String opStr) throws Exception {
         ResultValue res = new ResultValue();
         Numeric nOp1;
@@ -1043,7 +1050,7 @@ public class Parser{
 
                 scan.getNext();
 
-                if(scan.currentToken.primClassif != Classif.OPERAND) {
+                if(scan.nextToken.primClassif != Classif.OPERAND) {
                     error("Expected variable but found: %s", scan.currentToken.tokenStr);
                 }
 
@@ -1179,7 +1186,7 @@ public class Parser{
         ResultValue resExpr = new ResultValue();
         ResultArray resultArray;
         ArrayList<ResultValue> exprValue = new ArrayList<>();
-        int populated = 1;
+        int populated = 0;
         Token tempToken = scan.currentToken;
 
         if(bExec) {
@@ -1191,26 +1198,26 @@ public class Parser{
                         scan.setPosition(tempToken);
                         return assignArrayStmt(variableStr, type, declared);
                     }
-                    scan.getNext();
-                    populated++;
-                    if (type == SubClassif.INTEGER) {
-                        resExpr.value = Utility.castInt(this, resExpr);
-                        resExpr.type = SubClassif.INTEGER;
-                        exprValue.add(resExpr);
-                    } else if (type == SubClassif.FLOAT) {
-                        resExpr.value = Utility.castFloat(this, resExpr);
-                        resExpr.type = SubClassif.FLOAT;
-                        exprValue.add(resExpr);
-                    } else if (type == SubClassif.BOOLEAN) {
-                        resExpr.value = Utility.castBoolean(this, resExpr);
-                        resExpr.type = SubClassif.BOOLEAN;
-                        exprValue.add(resExpr);
-                    } else if (type == SubClassif.STRING) {
-                        resExpr.type = SubClassif.STRING;
-                        exprValue.add(resExpr);
-                    } else {
-                        error("Invalid assign type: %s", variableStr);
-                    }
+                }
+                scan.getNext();
+                populated++;
+                if (type == SubClassif.INTEGER) {
+                    resExpr.value = Utility.castInt(this, resExpr);
+                    resExpr.type = SubClassif.INTEGER;
+                    exprValue.add(resExpr);
+                } else if (type == SubClassif.FLOAT) {
+                    resExpr.value = Utility.castFloat(this, resExpr);
+                    resExpr.type = SubClassif.FLOAT;
+                    exprValue.add(resExpr);
+                } else if (type == SubClassif.BOOLEAN) {
+                    resExpr.value = Utility.castBoolean(this, resExpr);
+                    resExpr.type = SubClassif.BOOLEAN;
+                    exprValue.add(resExpr);
+                } else if (type == SubClassif.STRING) {
+                    resExpr.type = SubClassif.STRING;
+                    exprValue.add(resExpr);
+                } else {
+                    error("Invalid assign type: %s", variableStr);
                 }
             }
             if(declared != -1 && exprValue.size() > declared) {
@@ -1235,7 +1242,7 @@ public class Parser{
         return new ResultArray( "", SubClassif.VOID, Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
-    public ResultValue assignIndex(String variableStr, SubClassif type, int iIndex, ResultValue resIndex) throws Exception{
+    public ResultArray assignIndex(String variableStr, SubClassif type, int iIndex, ResultValue resIndex) throws Exception{
         ResultValue resultValue = new ResultValue();
         ResultArray resultArray = null;
         int populated = 0;
@@ -1284,11 +1291,12 @@ public class Parser{
                 }
             }
             if (resultArray1.declaredSize == -1) {
-                resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, populated, resultArray.declaredSize);
+                resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, --populated, resultArray1.declaredSize);
             } else {
-                resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, populated, resultArray.declaredSize);
+                resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, --populated, resultArray1.declaredSize);
             }
             smStorage.insertValue(variableStr, resultArray);
+            return resultArray;
         }
         else {
             scan.nextToken.printToken();
@@ -1301,7 +1309,7 @@ public class Parser{
     private ResultArray assignArrayStmt(String variableStr, SubClassif type, int declared) throws Exception {
         ResultValue resExpr;
         ResultArray resultArray = new ResultArray();
-        int populated = 1;
+        int populated = 0;
         if(scan.nextToken.primClassif == Classif.OPERAND) {
             ResultArray resultArray1 = (ResultArray) smStorage.getValue(variableStr);
             ResultValue resultValue = expr(false);
@@ -1314,12 +1322,10 @@ public class Parser{
             }
             assert resultArray1 != null;
             if(resultArray1.structure.equals(Structure.UNBOUNDED_ARRAY)) {
-                assert resultValue != null;
                 if (resultValue.structure.equals(Structure.PRIMITIVE)) {
                     error("Can't assign scalar to unbounded array");
                 }
             }
-            assert resultValue != null;
             if(resultValue.structure.equals(Structure.PRIMITIVE)) {
                 for(int i = 0; i < resultArray1.declaredSize; i++) {
                     if(type.equals(SubClassif.INTEGER)) {
@@ -1342,7 +1348,7 @@ public class Parser{
                     }
                     else if(type.equals(SubClassif.STRING)) {
                         resExpr = resultValue.clone();
-                        resExpr.type = SubClassif.FLOAT;
+                        resExpr.type = SubClassif.STRING;
                         resultArray1.array.set(i, resExpr);
                     }
                     else {
@@ -1353,10 +1359,10 @@ public class Parser{
                     error("Can only have one argument when using array to scalar assignment");
                 }
                 if(declared == -1) {
-                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, populated, declared);
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, --populated, declared);
                 }
                 else {
-                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, populated, declared);
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, --populated, declared);
                 }
             }
             else if(resultValue.structure == Structure.FIXED_ARRAY || resultValue.structure == Structure.UNBOUNDED_ARRAY) {
@@ -1372,57 +1378,70 @@ public class Parser{
                         resExpr = resultArray2.array.get(i).clone();
                         resExpr.value = Utility.castInt(this, resExpr);
                         resExpr.type = SubClassif.INTEGER;
-                        if (declared == -1) {
+                        if (declared != -1) {
+                            resultArray1.array.set(i, resExpr);
+                        }
+                        else {
                             if (resultArray1.array == null) {
                                 resultArray1.array = new ArrayList<>();
                             }
                             if (resultArray1.array.size() <= i) {
                                 resultArray1.array.add(i, null);
                             }
+                            resultArray1.array.set(i, resExpr);
                         }
-                        resultArray1.array.set(i, resExpr);
                     }
                     else if(type.equals(SubClassif.FLOAT)) {
                         resExpr = resultArray2.array.get(i).clone();
                         resExpr.value = Utility.castFloat(this, resExpr);
                         resExpr.type = SubClassif.FLOAT;
-                        if (declared == -1) {
+                        if (declared != -1) {
+                            resultArray1.array.set(i, resExpr);
+                        }
+                        else {
                             if (resultArray1.array == null) {
                                 resultArray1.array = new ArrayList<>();
                             }
                             if (resultArray1.array.size() <= i) {
                                 resultArray1.array.add(i, null);
                             }
+                            resultArray1.array.set(i, resExpr);
                         }
-                        resultArray1.array.set(i, resExpr);
-
                     }
                     else if(type.equals(SubClassif.BOOLEAN)) {
                         resExpr = resultArray2.array.get(i).clone();
                         resExpr.value = Utility.castBoolean(this, resExpr);
                         resExpr.type = SubClassif.BOOLEAN;
-                        if (declared == -1) {
+                        if (declared != -1) {
+                            resultArray1.array.set(i, resExpr);
+                        }
+                        else {
                             if (resultArray1.array == null) {
                                 resultArray1.array = new ArrayList<>();
                             }
                             if (resultArray1.array.size() <= i) {
                                 resultArray1.array.add(i, null);
                             }
+                            resultArray1.array.set(i, resExpr);
                         }
-                        resultArray1.array.set(i, resExpr);
+
                     }
                     else if(type.equals(SubClassif.STRING)) {
                         resExpr = resultArray2.array.get(i).clone();
                         resExpr.type = SubClassif.STRING;
-                        if (declared == -1) {
+                        if (declared != -1) {
+                            resultArray1.array.set(i, resExpr);
+                        }
+                        else {
                             if (resultArray1.array == null) {
                                 resultArray1.array = new ArrayList<>();
                             }
                             if (resultArray1.array.size() <= i) {
                                 resultArray1.array.add(i, null);
                             }
+                            resultArray1.array.set(i, resExpr);
                         }
-                        resultArray1.array.set(i, resExpr);
+
                     }
                     else {
                         error("Invalid assign type: %s", variableStr);
@@ -1437,10 +1456,10 @@ public class Parser{
                     error("Can only have one argument when using array to array assignment");
                 }
                 if(declared == -1) {
-                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, populated, declared);
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.UNBOUNDED_ARRAY, --populated, declared);
                 }
                 else {
-                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, populated, declared);
+                    resultArray = new ResultArray(variableStr, resultArray1.array, type, Structure.FIXED_ARRAY, --populated, declared);
                 }
                 smStorage.insertValue(variableStr, resultArray);
                 return resultArray;

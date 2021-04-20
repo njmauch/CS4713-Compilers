@@ -58,25 +58,7 @@ endfor;
 print("Nested for loops, sorting the array");
 Bool bChange;
 Int j;
-for i=0 to ELEM(iDM)-1:
-    bChange = F;
-    for j=0 to ELEM(iDM)-i-1 by 1:
-        if iDM[j+1] < iDM[j]:
-           iTemp = iDM[j+1];
-           iDM[j+1] = iDM[j];
-           iDM[j] = iTemp;
-           bChange = T;
-        endif;
-    endfor;
-    if not bChange:
-        print("\tready to leave, i=", i);
-        // break; -- not in Pgm4
-    endif;
-endfor;
-print("sorted array");
-for i=0 to ELEM(iDM):
-    print("\t", iDM[i]);
-endfor;
+
 
 // Assign a value to the entire array
 print("Scalar assignment to an array");

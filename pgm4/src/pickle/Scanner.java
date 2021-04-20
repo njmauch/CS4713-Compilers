@@ -17,7 +17,7 @@ public class Scanner {
 
     private final static String whiteSpace = " \t\n";
     private final static String delimiters = " \t;:()\'\"=!<>+-*/[]#,^\n";
-    private final static String strOperators = "<>=!^*+-";
+    private final static String strOperators = "#<>=!^*/+-";
     private final static String operators = "+-*/<>!=#^";
     private final static String separators = "():;[],";
 
@@ -94,6 +94,7 @@ public class Scanner {
                     nextToken.primClassif = Classif.SEPARATOR;
                     nextToken.tokenStr = new String(textCharM, iColPos, 1);
                     nextToken.iSourceLineNr = iSourceLineNr;
+                    nextToken.iColPos = iColPos;
                     iSourceLineNr++;
                     if (iSourceLineNr < sourceLineM.size()) {
                         textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
@@ -136,6 +137,7 @@ public class Scanner {
             createOperandToken(nextToken);
             if(iColPos >= textCharM.length) {
                 nextToken.iSourceLineNr = iSourceLineNr;
+                nextToken.iColPos = iColPos;
                 iSourceLineNr++;
                 textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
                 iColPos = 0;
@@ -168,12 +170,14 @@ public class Scanner {
         if (iBeginTokenPos == iColPos) {
             if (strOperators.indexOf(textCharM[iColPos]) > -1) {
                 if (textCharM[iColPos + 1] == '=') {
+                    nextToken.iColPos = iColPos;
                     nextToken.primClassif = Classif.OPERATOR;
                     nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 2);
                     nextToken.iSourceLineNr = iSourceLineNr;
                     iColPos +=2;
                     return;
                 } else if (operators.indexOf(textCharM[iColPos]) > -1) {
+                    nextToken.iColPos = iColPos;
                     nextToken.primClassif = Classif.OPERATOR;
                     nextToken.tokenStr = new String(textCharM, iBeginTokenPos, 1);
                     nextToken.iSourceLineNr = iSourceLineNr;
@@ -263,6 +267,7 @@ public class Scanner {
         strToken.primClassif = Classif.OPERAND;
         strToken.subClassif = SubClassif.STRING;
         strToken.iSourceLineNr = iSourceLineNr;
+        strToken.iColPos = iColPos;
         char strTokenDelim = textCharM[iColPos];
         StringBuilder tempStr = new StringBuilder();
         iColPos++;
@@ -314,6 +319,7 @@ public class Scanner {
         int bIsFloat = 0;
         StringBuilder tempStr = new StringBuilder();
 
+        operandToken.iColPos = iColPos;
         operandToken.primClassif = Classif.OPERAND;
         if (textCharM[iColPos] >= '0' && textCharM[iColPos] <= '9') {
             for (int i = iColPos; ;i++) {

@@ -119,8 +119,14 @@ public class SymbolTable {
         this.putSymbol("endfor", new STControl("endfor", Classif.CONTROL, SubClassif.END));
         this.putSymbol("while", new STControl("while", Classif.CONTROL, SubClassif.FLOW));
         this.putSymbol("endwhile", new STControl("endwhile", Classif.CONTROL, SubClassif.END));
+        this.putSymbol("to", new STControl("to", Classif.CONTROL, SubClassif.FLOW));
+        this.putSymbol("by", new STControl("by", Classif.CONTROL, SubClassif.FLOW));
 
         this.putSymbol("print", new STFunction("print", Classif.FUNCTION, SubClassif.BUILTIN));
+        this.putSymbol("LENGTH", new STFunction("LENGTH", Classif.FUNCTION, SubClassif.BUILTIN));
+        this.putSymbol("SPACES", new STFunction("SPACES", Classif.FUNCTION, SubClassif.BUILTIN));
+        this.putSymbol("ELEM", new STFunction("ELEM", Classif.FUNCTION, SubClassif.BUILTIN));
+        this.putSymbol("MAXELEM", new STFunction("MAXELEM", Classif.FUNCTION, SubClassif.BUILTIN));
 
 
         this.putSymbol(";", new STSeparator(";", Classif.SEPARATOR));

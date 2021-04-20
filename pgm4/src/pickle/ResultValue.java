@@ -6,7 +6,7 @@ enum Structure {
     UNBOUNDED_ARRAY
 }
 
-public class ResultValue {
+public class ResultValue implements Cloneable{
     public SubClassif type;
     public String value;
     public Structure structure;
