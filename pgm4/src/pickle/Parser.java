@@ -775,7 +775,7 @@ public class Parser{
                     bCategory = true;
                     break;
                 case OPERATOR:
-                    if (!bCategory && !scan.currentToken.tokenStr.equals("-")) {
+                    if (!bCategory && !scan.currentToken.tokenStr.equals("-") && !scan.currentToken.tokenStr.equals("not")) {
                         error("Unexpected operator, instead got: %s", scan.currentToken.tokenStr);
                     }
                     switch(scan.currentToken.tokenStr) {
@@ -803,7 +803,11 @@ public class Parser{
                                     if (popped.tokenStr.equals("u-")) {
                                         res = evalCond(resValue1, new ResultValue(), "u-");
                                         outStack.push(res);
-                                    } else {
+                                    }
+                                    else if (popped.tokenStr.equals("not")) {
+                                        res = evalCond(outStack.pop(), new ResultValue(), popped.tokenStr);
+                                    }
+                                    else {
                                         resValue2 = outStack.pop();
                                         res = evalCond(resValue2, resValue1, popped.tokenStr);
                                     }
@@ -846,7 +850,11 @@ public class Parser{
                                     resValue1 = outStack.pop();
                                     res = evalCond(resValue1, new ResultValue(), "u-");
                                     outStack.push(res);
-                                } else {
+                                }
+                                else if (popped.tokenStr.equals("not")) {
+                                    outStack.push(evalCond(outStack.pop(), new ResultValue(), "not"));
+                                }
+                                else {
                                     resValue1 = outStack.pop();
                                     resValue2 = outStack.pop();
                                     res = evalCond(resValue2, resValue1, popped.tokenStr);
@@ -874,7 +882,11 @@ public class Parser{
                 resValue1 = outStack.pop();
                 res = evalCond(resValue1, new ResultValue(), "u-");
                 outStack.push(res);
-            } else {
+            }
+            else if (popped.tokenStr.equals("not")) {
+                outStack.push(evalCond(outStack.pop(), new ResultValue(), popped.tokenStr));
+            }
+            else {
                 if(popped.primClassif.equals(Classif.FUNCTION)) {
                     error("Function %s missing right paren", popped.tokenStr);
                 }
@@ -943,6 +955,7 @@ public class Parser{
                 res = Utility.uMinus(this, nOp1);
             }
             case "#" -> res = Utility.concat(this, resO1, resO2);
+            case "not" -> res = Utility.not(this, resO1);
             default -> error("Bad compare token");
         }
         return res;

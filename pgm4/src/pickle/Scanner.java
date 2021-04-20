@@ -320,7 +320,6 @@ public class Scanner {
     private void createOperandToken(Token operandToken) throws Exception {
         int bIsFloat = 0;
         StringBuilder tempStr = new StringBuilder();
-
         operandToken.iColPos = iColPos;
         operandToken.primClassif = Classif.OPERAND;
         if (textCharM[iColPos] >= '0' && textCharM[iColPos] <= '9') {
@@ -360,6 +359,7 @@ public class Scanner {
             }
         } else if ((operandToken.tokenStr.equals("T")) || (operandToken.tokenStr.equals("F"))) {
             operandToken.subClassif = SubClassif.BOOLEAN;
+            nextToken.iColPos--;
             return;
         } else {
             operandToken.subClassif = SubClassif.IDENTIFIER;

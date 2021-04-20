@@ -458,4 +458,22 @@ public class Utility {
         ResultValue res = new ResultValue(SubClassif.STRING, (resO1.value + resO2.value), Structure.PRIMITIVE);
         return res;
     }
+
+    public static ResultValue not(Parser parser, ResultValue resO1) throws Exception {
+        ResultValue res = new ResultValue();
+        if(resO1.type.equals(SubClassif.STRING) || resO1.type.equals(SubClassif.BOOLEAN)) {
+            if(resO1.value.equals("T")) {
+                res.value = "F";
+            }
+            else{
+                res.value = "T";
+            }
+            res.type = SubClassif.BOOLEAN;
+            res.structure = Structure.PRIMITIVE;
+        }
+        else {
+            parser.error("Can't coerce to boolean: %s", resO1.value);
+        }
+        return res;
+    }
 }
