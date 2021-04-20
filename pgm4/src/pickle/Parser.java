@@ -778,15 +778,22 @@ public class Parser{
                     if (!bCategory && !scan.currentToken.tokenStr.equals("-")) {
                         error("Unexpected operator, instead got: %s", scan.currentToken.tokenStr);
                     }
-                    if(scan.currentToken.tokenStr.equals("-")) {
-                        if (prevToken.primClassif == Classif.OPERATOR || prevToken.tokenStr.equals(",") || prevToken.tokenStr.equals("(")) {
-                            if (scan.nextToken.primClassif == Classif.OPERAND || scan.nextToken.tokenStr.equals("(")) {
-                                stack.push(new Token("u-"));
-                            } else {
-                                error("Unexpected operator, instead got: %s", scan.nextToken.tokenStr);
+                    switch(scan.currentToken.tokenStr) {
+                        case "not":
+                            if (prevToken.primClassif == Classif.OPERATOR || prevToken.tokenStr.equals(",") || prevToken.tokenStr.equals("(")) {
+                                stack.push(scan.currentToken);
                             }
-                        }
-                     else {
+                            break;
+                        case "-":
+                            if (prevToken.primClassif == Classif.OPERATOR || prevToken.tokenStr.equals(",") || prevToken.tokenStr.equals("(")) {
+                                if (scan.nextToken.primClassif == Classif.OPERAND || scan.nextToken.tokenStr.equals("(")) {
+                                    stack.push(new Token("u-"));
+                                } else {
+                                    error("Unexpected operator, instead got: %s", scan.nextToken.tokenStr);
+                                }
+                                break;
+                            }
+                        default:
                             while (!stack.empty()) {
                                 if (getPrecedence(scan.currentToken, false) > getPrecedence((Token) stack.peek(), true)) {
                                     break;
@@ -805,7 +812,6 @@ public class Parser{
                             }
                             stack.push(scan.currentToken);
                         }
-                    }
                     bCategory = false;
                     break;
                 case FUNCTION:
