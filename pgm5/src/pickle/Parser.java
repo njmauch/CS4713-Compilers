@@ -18,6 +18,7 @@ public class Parser{
 
 
     /**
+     * Parser(Scanner scan, StorageManager storageManager, SymbolTable symbolTable, Precedence precedence)
      * Parser construct that takes scanner, storageManager, symboltable, and precedence hashmap
      * this objects are used throughout the parser class
      * @param scan object that is used to get the next token and navigate through source file
@@ -38,6 +39,7 @@ public class Parser{
     }
 
     /**
+     * void skipTo(String tokenStr) throws Exception
      * Function that skips to the next instance of tokenStr in the source file
      * @param tokenStr variable passed in that we skip to until it is found
      * @throws Exception general error
@@ -49,6 +51,7 @@ public class Parser{
     }
 
     /**
+     * void error(String fmt, Object... varArgs) throws Exception
      * Print error when called. handles various formats of errors
      * @param fmt string that contains the error message and variable
      * @param varArgs variable number of arguments used in the string
@@ -61,6 +64,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue statement (boolean bExec) throws Exception
      * Function that is beginning of parsing through source file.  Based on type of token that
      * is given from scanner, will decide what to do with that token and that line of code
      * in pickle
@@ -114,6 +118,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue statements(Boolean bExec, String termStr) throws Exception
      * This method is utilized by ifStmt, whileStmt, and forStmt
      * It executes from current position all the way up to the terminating str
      * @param bExec boolean to decide if section of code is executed or skipped
@@ -133,6 +138,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue functionStmt (boolean bExec) throws Exception
      * This method is to run any builtin functions in pickle.  Currently implemented built in
      * functions include, print(), LENGTH(), SPACES(), ELEM(), MAXELEM();
      *
@@ -156,7 +162,7 @@ public class Parser{
             }
             //
             else if(scan.currentToken.tokenStr.equals("SPACES") || scan.currentToken.tokenStr.equals("ELEM")
-                || scan.currentToken.tokenStr.equals("MAXELEM") || scan.currentToken.tokenStr.equals("LENGTH")) {
+                    || scan.currentToken.tokenStr.equals("MAXELEM") || scan.currentToken.tokenStr.equals("LENGTH")) {
                 res = expr(false);
             }
             //function was called but is not a built in or defined function
@@ -168,6 +174,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue print() throws Exception
      * Print function, prints statement to the screen
      * @return
      * @throws Exception
@@ -220,6 +227,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue whileStmt(boolean bExec) throws Exception
      * whileStmt Function executes while statements in pickle
      * @param bExec decides if statements are to be executed or skipped
      * @return
@@ -269,6 +277,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue declareStmt(boolean bExec) throws Exception
      * declareStmt function called when a control declare token is encountered
      * it uses a switch statement to determine type of subclass and assigns it
      * to the next token found as it is the variable name
@@ -428,7 +437,7 @@ public class Parser{
                 //can't declare array without size or list of values
                 if (scan.nextToken.tokenStr.equals(";"))
                     error("Can't declare array without length");
-                //we are setting values to the array
+                    //we are setting values to the array
                 else if (scan.nextToken.tokenStr.equals("="))
                 {
                     //get the '=' token
@@ -475,6 +484,7 @@ public class Parser{
     }
 
     /**
+     * ResultValue assignmentStmt(boolean bExec) throws Exception
      * assignmentStmt is called whenever we encounter an '='.  Determines the value
      * of the expression after the '=' and assign it to the variable
      * also handles '+=' and '-='
@@ -734,39 +744,48 @@ public class Parser{
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
-    /**
-     *
-     * @param inFunc
-     * @return
+    /***
+     * private ResultValue expr()
+     * This function will run the expression and return the value to called
+     * @param
+     * @return          - ResultValue - Result after execute the statement
      * @throws Exception
      */
     private ResultValue expr(Boolean inFunc) throws Exception{
         Stack<ResultValue> outStack = new Stack<>();
         Stack<Token> stack = new Stack<>();
-        Token popped;
-        ResultValue res, resValue1, resValue2;
+        Token popped;								//Poped tokens
+        ResultValue res, resValue1, resValue2;		//Setup Return values
         boolean bFound;
         boolean bCategory = false;
 
+        //If the next token is ;, the error, it has to be an OPERAND
         if(scan.nextToken.tokenStr.equals(";")) {
             error("Expected operand");
         }
+        //Function print
         if(scan.currentToken.primClassif == Classif.FUNCTION && (scan.currentToken.tokenStr.equals("print"))) {
             scan.getNext();
         }
+        //If not print
         if(scan.currentToken.primClassif != Classif.FUNCTION || scan.currentToken.tokenStr.equals("print")){
             scan.getNext();
         }
-        Token prevToken = scan.currentToken;
+        Token prevToken = scan.currentToken;	//Save the current Token
+
+        /*
+         * Keep scanning for OPERAND, OPERATOR or FUNCTION
+         */
         while(scan.currentToken.primClassif.equals(Classif.OPERAND)
                 || scan.currentToken.primClassif.equals(Classif.OPERATOR)
                 || scan.currentToken.primClassif.equals(Classif.FUNCTION)
                 || "()".contains(scan.currentToken.tokenStr)) {
+            //Missing separator
             if (scan.currentToken.primClassif.equals(Classif.EOF)) {
                 error("Missing separator");
             }
             switch (scan.currentToken.primClassif) {
-                case OPERAND:
+                case OPERAND:	//If the current token is OPERAND
                     if (bCategory) {
                         error("Unexpected operand, instead got: %s", scan.currentToken.tokenStr);
                     }
@@ -774,16 +793,20 @@ public class Parser{
                     outStack.push(resValue1);
                     bCategory = true;
                     break;
-                case OPERATOR:
+                case OPERATOR:	//If the current token is OPERATOR
+                    //Only vailid for OPERATOR - and not
                     if (!bCategory && !scan.currentToken.tokenStr.equals("-") && !scan.currentToken.tokenStr.equals("not")) {
                         error("Unexpected operator, instead got: %s", scan.currentToken.tokenStr);
                     }
+
                     switch(scan.currentToken.tokenStr) {
+                        //If the OPERATOR is not
                         case "not":
                             if (prevToken.primClassif == Classif.OPERATOR || prevToken.tokenStr.equals(",") || prevToken.tokenStr.equals("(")) {
                                 stack.push(scan.currentToken);
                             }
                             break;
+                        //If the OPERATOR is -
                         case "-":
                             if (prevToken.primClassif == Classif.OPERATOR || prevToken.tokenStr.equals(",") || prevToken.tokenStr.equals("(")) {
                                 if (scan.nextToken.primClassif == Classif.OPERAND || scan.nextToken.tokenStr.equals("(")) {
@@ -815,10 +838,10 @@ public class Parser{
                                 }
                             }
                             stack.push(scan.currentToken);
-                        }
+                    }
                     bCategory = false;
                     break;
-                case FUNCTION:
+                case FUNCTION:	//If the current token is FUNCTION
                     if (bCategory) {
                         error("Missing separator, instead got: %s", scan.currentToken.tokenStr);
                     }
@@ -829,10 +852,10 @@ public class Parser{
                         error("Function statement needs '(' to start with: Func %s", scan.currentToken.tokenStr);
                     }
                     break;
-                case SEPARATOR:
+                case SEPARATOR:	//If the current token is SEPARATOR
                     switch (scan.currentToken.tokenStr) {
-                        case "(" -> stack.push(scan.currentToken);
-                        case ")" -> {
+                        case "(" -> stack.push(scan.currentToken);		//Push any (
+                        case ")" -> {									//Pop any )
                             if (inFunc && scan.nextToken.tokenStr.equals(";")) {
                                 break;
                             }
@@ -867,14 +890,17 @@ public class Parser{
                         }
                     }
             }
-            prevToken = scan.currentToken;
+            prevToken = scan.currentToken;	//Save current token to pervious token
             scan.getNext();
         }
+        //Missing separator
         if(scan.currentToken.subClassif.equals(SubClassif.DECLARE)){
             error("Missing separator");
         }
+        //After reaching the end of stack, if the stack is not empty
         while(!stack.empty()){
             popped = stack.pop();
+            //Error with ()
             if(popped.tokenStr.equals("(")) {
                 error("Unmatched right paren");
             }
@@ -906,11 +932,11 @@ public class Parser{
     }
 
     /**
-     *
+     * ResultValue evalCond(ResultValue resO1, ResultValue resO2, String opStr) throws Exception
      * @param resO1 first operand
      * @param resO2 second operand
      * @param opStr operation to be performed with the first and second operand, or possibly just first operand
-     * @return
+     * @return ResultValue
      * @throws Exception
      */
     private ResultValue evalCond(ResultValue resO1, ResultValue resO2, String opStr) throws Exception {
@@ -961,6 +987,13 @@ public class Parser{
         return res;
     }
 
+    /**
+     * ResultValue ifStmt(Boolean bExec) throws Exception
+     * If statement sing inside parser
+     * @param Boolean bExec	- determind if the function is executed
+     * @return ResultValue
+     * @throws Exception
+     */
     private ResultValue ifStmt(Boolean bExec) throws Exception {
         int saveLineNr = scan.currentToken.iSourceLineNr;
         ResultValue resCond;
@@ -999,6 +1032,14 @@ public class Parser{
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
     }
 
+    /**
+     * ResultValue assign(String variableStr, ResultValue res) throws Exception
+     * assign and put the variable into the storage management
+     * @param variableStr 	string	- string of variable
+     * @param res 		  	ResultValue	- value to return
+     * @return ResultValue
+     * @throws Exception
+     */
     private ResultValue assign(String variableStr, ResultValue res) throws Exception {
         switch (res.type) {
             case INTEGER -> {
@@ -1021,14 +1062,23 @@ public class Parser{
         return res;
     }
 
+    /**
+     * ResultValue forStmt(Boolean bExec) throws Exception
+     * forStmt making for working on Parser
+     * @param bExec 		Boolean	- determind if for function is executed or not
+     * @return ResultValue
+     * @throws Exception
+     */
     public ResultValue forStmt(Boolean bExec) throws Exception {
         ResultValue res;
         Token tempToken;
 
+        //If function is execute
         if (bExec) {
-            tempToken = scan.currentToken;
-            scan.getNext();
+            tempToken = scan.currentToken;	//Save current token to tempToken
+            scan.getNext();					//Get next token
 
+            //Return error if this is IDENTIFIER
             if (scan.currentToken.subClassif != SubClassif.IDENTIFIER) {
                 error("Unexpected variable found: %s", scan.currentToken.tokenStr);
             }
@@ -1200,7 +1250,7 @@ public class Parser{
                 error("Invalid control seperator: %s, expected '=', 'in', or 'from'", scan.currentToken.tokenStr);
             }
         }
-        else {
+        else {		//If for statement is not execute, skip to :
             skipTo(":");
         }
         res = statements(false, "endfor");
@@ -1214,6 +1264,16 @@ public class Parser{
         return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
     }
 
+    /**
+     * RdeclareArray(boolean bExec, String variableStr, SubClassif type, int declared)
+     * Decalare Array
+     * @param bExec 		Boolean	- determind if for function is executed or not
+     * @param variableStr	String	- String of declare variable
+     * @param type			SubClassif	- Array type
+     * @param declared		int
+     * @return ResultArray 	Return declared Array
+     * @throws Exception
+     */
     public ResultArray declareArray(boolean bExec, String variableStr, SubClassif type, int declared) throws Exception {
         ResultValue resExpr = new ResultValue();
         ResultArray resultArray;
@@ -1274,6 +1334,16 @@ public class Parser{
         return new ResultArray( "", SubClassif.VOID, Structure.PRIMITIVE, scan.currentToken.tokenStr);
     }
 
+    /**
+     * ResultArray assignIndex(String variableStr, SubClassif type, int iIndex, ResultValue resIndex)
+     * This function assign the Index of Array
+     * @param variableStr   String  - String of declare variable
+     * @param type          SubClassif  - Array type
+     * @param iIndex        int - indext of the Array to assign
+     * @param resIndex      ResultValue
+     * @return ResultArray  Return Array after assigned
+     * @throws Exception
+     */
     public ResultArray assignIndex(String variableStr, SubClassif type, int iIndex, ResultValue resIndex) throws Exception{
         ResultValue resultValue = new ResultValue();
         ResultArray resultArray = null;
@@ -1338,6 +1408,16 @@ public class Parser{
         return null;
     }
 
+    /**
+     * ResultArray assignArrayStmt(String variableStr, SubClassif type, int declared)
+     * This function assign the Index of Array
+     * @param variableStr   String  - String of declare variable
+     * @param type          SubClassif  - Array type
+     * @param iIndex        int - indext of the Array to assign
+     * @param resIndex      ResultValue
+     * @return ResultArray  Return Array after assigned
+     * @throws Exception
+     */
     private ResultArray assignArrayStmt(String variableStr, SubClassif type, int declared) throws Exception {
         ResultValue resExpr;
         ResultArray resultArray = new ResultArray();
@@ -1503,6 +1583,12 @@ public class Parser{
         return resultArray;
     }
 
+    /**
+     * ResultValue getOperand() throws Exception
+     * This ultility function to return element of array, using in expr to get the operand
+     * @return ResultArray
+     * @throws Exception
+     */
     public ResultValue getOperand() throws Exception {
         Token op = scan.currentToken;
         ResultValue resultValue1;
@@ -1580,8 +1666,6 @@ public class Parser{
 
     private ResultValue builtInFunctions(Token funcName, ResultValue parm) throws Exception {
         ResultValue res = null;
-        String value = "";
-        SubClassif type = SubClassif.BUILTIN;
         switch (funcName.tokenStr) {
             case "LENGTH" -> res = Utility.LENGTH(parm.value);
             case "SPACES" -> res = Utility.SPACES(parm.value);
