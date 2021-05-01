@@ -476,4 +476,22 @@ public class Utility {
         }
         return res;
     }
+
+    public static ResultValue or(Parser parser, ResultValue resO1, ResultValue resO2) throws Exception {
+        ResultValue resultValue = new ResultValue();
+        resultValue.type = SubClassif.BOOLEAN;
+        if(resO1.type == SubClassif.BOOLEAN || resO1.type == SubClassif.STRING) {
+            resO2.value = castBoolean(parser, resO2);
+            if(resO1.value.equals("T") || resO2.value.equals("T")){
+                resultValue.value = "T";
+            }
+            else {
+                resultValue.value = "F";
+            }
+        }
+        else {
+            parser.error("Unable to convert %s to boolean", resO1.value);
+        }
+        return resultValue;
+    }
 }

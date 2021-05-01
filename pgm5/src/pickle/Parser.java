@@ -131,6 +131,9 @@ public class Parser{
         ResultValue res = statement(bExec);
         //loop through source file until we reach the terminating string
         while(! termStr.contains(res.terminatingStr)) {
+            if((res.terminatingStr.equals("break") || res.terminatingStr.equals("continue")) && bExec) {
+                break;
+            }
             //execute next statement
             res = statement(bExec);
         }
@@ -234,7 +237,7 @@ public class Parser{
      * @throws Exception
      */
     private ResultValue whileStmt(boolean bExec) throws Exception {
-        ResultValue res;
+        ResultValue resCond;
         Token tempToken;
 
         //temp token used to go back to top of while loop to check if condition is still true
@@ -242,14 +245,25 @@ public class Parser{
         //true, so we are executing statements inside while
         if (bExec) {
             //evaluate expression, determine if condition is true or false
-            ResultValue resCond = expr(false);
+            resCond = expr(false);
             //if condition returned true, execute statements
             while(resCond.value.equals("T")) {
                 //run through the statements inside the while loop until "endwhile" is found
-                res = statements(true, "endwhile");
+                resCond = statements(true, "endwhile");
+                if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
+                    if(! scan.getNext().equals(";")) {
+                        error("Expected ';' after %s", resCond.terminatingStr);
+                    }
+                    if(resCond.terminatingStr.equals("break")){
+                        break;
+                    }
+                    else {
+                        resCond = statements(false, "endwhile");
+                    }
+                }
                 //if endwhile is not found then print error
-                if(! res.terminatingStr.equals("endwhile")){
-                    error("Expected endwhile for while beggining line %s, got %s", tempToken.iSourceLineNr, res.value);
+                if(! resCond.terminatingStr.equals("endwhile")){
+                    error("Expected endwhile for while beggining line %s, got %s", tempToken.iSourceLineNr, resCond.value);
                 }
                 //go back to beginning of while to recheck condition statement
                 scan.setPosition(tempToken);
@@ -259,15 +273,15 @@ public class Parser{
                 resCond = expr(false);
             }
             //condition returned false so skip ahead to endwhile
-            res = statements(false, "endwhile");
+            resCond = statements(false, "endwhile");
         }
         //we were told to ignore execution so we skip condition and then skip to endwhile
         else {
             skipTo(":");
-            res = statements(false, "endwhile");
+            resCond = statements(false, "endwhile");
         }
         //checks to make sure that while statement ends in 'endwhile;'
-        if(! res.terminatingStr.equals("endwhile")) {
+        if(! resCond.terminatingStr.equals("endwhile")) {
             error("Expected endwhile for while beggining line %s", tempToken.iSourceLineNr);
         }
         if(! scan.nextToken.tokenStr.equals(";")) {
@@ -982,6 +996,7 @@ public class Parser{
             }
             case "#" -> res = Utility.concat(this, resO1, resO2);
             case "not" -> res = Utility.not(this, resO1);
+            case "or" -> res = Utility.or(this, resO1, resO2);
             default -> error("Bad compare token");
         }
         return res;
@@ -990,7 +1005,7 @@ public class Parser{
     /**
      * ResultValue ifStmt(Boolean bExec) throws Exception
      * If statement sing inside parser
-     * @param Boolean bExec	- determind if the function is executed
+     * @param bExec	- determind if the function is executed
      * @return ResultValue
      * @throws Exception
      */
@@ -1002,6 +1017,12 @@ public class Parser{
             resCond = expr(false);
             if (resCond.value.equals("T")) {
                 resCond = statements(true, "endif else");
+                if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
+                    if(! scan.getNext().equals(";")) {
+                        error("Expected ';' after %s", resCond.terminatingStr);
+                    }
+                    resCond = statements(false, "else endif");
+                }
                 if (resCond.terminatingStr.equals("else")) {
                     if (!scan.getNext().equals(":")) {
                         error("expected a ‘:’after ‘else’");
@@ -1015,6 +1036,12 @@ public class Parser{
                         error("expected a ‘:’after ‘else’");
                     }
                     resCond = statements(true, "endif");
+                    if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
+                        if(! scan.getNext().equals(";")) {
+                            error("Expected ';' after %s", resCond.terminatingStr);
+                        }
+                        resCond = statements(false, "endif");
+                    }
                 }
             }
         }
@@ -1112,6 +1139,18 @@ public class Parser{
                 for(int i = cv; i < limit; i+= incr) {
                     res = statements(true, "endfor");
 
+                    if(res.terminatingStr.equals("break") || res.terminatingStr.equals("continue")) {
+                        if(! scan.getNext().equals(";")) {
+                            error("Expected ';' after %s", res.terminatingStr);
+                        }
+                        if(res.terminatingStr.equals("break")) {
+                            break;
+                        }
+                        if(res.terminatingStr.equals("continue")) {
+                            res = statements(false, "endfor");
+                        }
+                    }
+
                     if (!res.terminatingStr.equals("endfor")) {
                         if(!scan.nextToken.tokenStr.equals(";")) {
                             error("Expected 'endfor;' at end of for stmt");
@@ -1161,6 +1200,18 @@ public class Parser{
                         smStorage.insertValue(tempStr, res);
                         res = statements(true, "endfor");
 
+                        if(res.terminatingStr.equals("break") || res.terminatingStr.equals("continue")) {
+                            if(! scan.getNext().equals(";")) {
+                                error("Expected ';' after %s", res.terminatingStr);
+                            }
+                            if(res.terminatingStr.equals("break")) {
+                                break;
+                            }
+                            if(res.terminatingStr.equals("continue")) {
+                                res = statements(false, "endfor");
+                            }
+                        }
+
                         if (!res.terminatingStr.equals("endfor")) {
                             if(!scan.nextToken.tokenStr.equals(";")) {
                                 error("Expected 'endfor;' and end of for loop");
@@ -1181,6 +1232,18 @@ public class Parser{
                         res.value = "" + ch;
                         smStorage.insertValue(tempStr, res);
                         res = statements(true, "endfor");
+
+                        if(res.terminatingStr.equals("break") || res.terminatingStr.equals("continue")) {
+                            if(! scan.getNext().equals(";")) {
+                                error("Expected ';' after %s", res.terminatingStr);
+                            }
+                            if(res.terminatingStr.equals("break")) {
+                                break;
+                            }
+                            if(res.terminatingStr.equals("continue")) {
+                                res = statements(false, "endfor");
+                            }
+                        }
 
                         if (!res.terminatingStr.equals("endfor")) {
                             if(!scan.nextToken.tokenStr.equals(";")) {
@@ -1235,6 +1298,18 @@ public class Parser{
                     res.value = "" + s;
                     smStorage.insertValue(stringCV, res);
                     res = statements(true, "endfor");
+
+                    if(res.terminatingStr.equals("break") || res.terminatingStr.equals("continue")) {
+                        if(! scan.getNext().equals(";")) {
+                            error("Expected ';' after %s", res.terminatingStr);
+                        }
+                        if(res.terminatingStr.equals("break")) {
+                            break;
+                        }
+                        if(res.terminatingStr.equals("continue")) {
+                            res = statements(false, "endfor");
+                        }
+                    }
 
                     if (!res.terminatingStr.equals("endfor")) {
                         if(!scan.nextToken.tokenStr.equals(";")) {
@@ -1413,8 +1488,6 @@ public class Parser{
      * This function assign the Index of Array
      * @param variableStr   String  - String of declare variable
      * @param type          SubClassif  - Array type
-     * @param iIndex        int - indext of the Array to assign
-     * @param resIndex      ResultValue
      * @return ResultArray  Return Array after assigned
      * @throws Exception
      */
