@@ -2,6 +2,9 @@ package pickle;
 
 
 import java.lang.reflect.Array;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 public class Utility {
 
@@ -91,19 +94,19 @@ public class Utility {
         return resValue;
     }
 
-    public static ResultValue uMinus(Parser parser, Numeric nOp) throws Exception {
+    public static ResultValue uMinus(Parser parser, ResultValue resO1) throws Exception {
         ResultValue resValue = null;
 
-        if(nOp.type == SubClassif.INTEGER) {
-            int intResult = -nOp.integerValue;
-            resValue = new ResultValue(nOp.type, Integer.toString(intResult), Structure.PRIMITIVE);
+        if(resO1.type == SubClassif.INTEGER) {
+            int intResult = -1* (Integer.parseInt(resO1.value));
+            resValue = new ResultValue(resO1.type, Integer.toString(intResult), Structure.PRIMITIVE);
         }
-        else if(nOp.type == SubClassif.FLOAT) {
-            double dResult = -nOp.doubleValue;
-            resValue = new ResultValue(nOp.type, Double.toString(dResult), Structure.PRIMITIVE);
+        else if(resO1.type == SubClassif.FLOAT) {
+            double dResult = -1.0 * (Double.parseDouble(resO1.value));
+            resValue = new ResultValue(resO1.type, Double.toString(dResult), Structure.PRIMITIVE);
         }
         else {
-            parser.error(nOp.strValue + " is not numeric");
+            parser.error(resO1.value + " is not numeric");
         }
         return resValue;
     }
@@ -493,5 +496,124 @@ public class Utility {
             parser.error("Unable to convert %s to boolean", resO1.value);
         }
         return resultValue;
+    }
+
+    public static boolean validDate(Parser parser, ResultValue date) throws Exception {
+        int daysOfMonth[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        int iYear = Integer.parseInt(date.value.substring(0, 4));
+        int iMonth = Integer.parseInt(date.value.substring(5, 7));
+        int iDay = Integer.parseInt(date.value.substring(8));
+
+        if(date.value.substring(0, 4).contains("-")) {
+            parser.error("Invalid year format, needs to be 4 digits: %d", iYear);
+        }
+        if(iMonth < 1 || iMonth > 12) {
+            parser.error("Invalid month: %d", iMonth);
+        }
+        if(iDay < 1 || iDay > daysOfMonth[iMonth-1]) {
+            parser.error("Invalid day of the month: %d", iDay);
+        }
+        if(iDay == 29 && iMonth == 2) {
+            if(iYear % 4 == 0 && (iYear % 100 != 0 || iYear % 400 == 0)) {
+                return true;
+            }
+            else {
+                parser.error("Invalid day of the month since it is not a leap year: %d", iYear);
+            }
+        }
+        return true;
+    }
+
+    public static int DateToJulian(ResultValue date) {
+        int iCountDays;
+        int iYear = Integer.parseInt(date.value.substring(0, 4));
+        int iMonth = Integer.parseInt(date.value.substring(5, 7));
+        int iDay = Integer.parseInt(date.value.substring(8));
+
+        if(iMonth > 2) {
+            iMonth -= 3;
+        }
+        else {
+            iMonth += 9;
+            iYear -= 1;
+        }
+        iCountDays = 365 * iYear + iYear / 4 - iYear / 100 + iYear / 400 + (iMonth * 306 + 5) / 10 + (iDay);
+        return iCountDays;
+    }
+
+    public static ResultValue dateAdj(Parser parser, ResultValue date, int days) throws Exception {
+        if(!validDate(parser, date)) {
+            parser.error("Invalid date format: %s", date.value);
+        }
+
+        int iYear = Integer.parseInt(date.value.substring(0, 4));
+        int iMonth = Integer.parseInt(date.value.substring(5, 7));
+        int iDay = Integer.parseInt(date.value.substring(8));
+
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar calendar = new GregorianCalendar(iYear, iMonth-1, iDay);
+        calendar.add(Calendar.DAY_OF_MONTH, days);
+
+        return new ResultValue(SubClassif.DATE, simpleDateFormat.format(calendar.getTime()), Structure.PRIMITIVE, ";");
+    }
+
+    public static ResultValue dateDiff(Parser parser, ResultValue date1, ResultValue date2) throws Exception {
+        int iDate1;
+        int iDate2;
+
+        if(!validDate(parser, date1)) {
+            parser.error("Invalid date format: %s", date1.value);
+        }
+        if(!validDate(parser, date2)) {
+            parser.error("Invalid date format: %s", date2.value);
+        }
+        iDate1 = DateToJulian(date1);
+        iDate2 = DateToJulian(date2);
+
+        return new ResultValue(SubClassif.DATE, "" + (iDate1 - iDate2), Structure.PRIMITIVE, ";");
+    }
+
+    public static ResultValue dateAge(Parser parser, ResultValue date1, ResultValue date2) throws Exception {
+        int iYear1 = Integer.parseInt(date1.value.substring(0, 4));
+        int iMonth1 = Integer.parseInt(date1.value.substring(5, 7));
+        int iDay1 = Integer.parseInt(date1.value.substring(8));
+
+        int iYear2 = Integer.parseInt(date2.value.substring(0, 4));
+        int iMonth2 = Integer.parseInt(date2.value.substring(5, 7));
+        int iDay2 = Integer.parseInt(date2.value.substring(8));
+
+        int iDifference = iYear1 - iYear2;
+
+        if(!validDate(parser, date1)) {
+            parser.error("Invalid date format: %s", date1.value);
+        }
+        if(!validDate(parser, date2)) {
+            parser.error("Invalid date format: %s", date2.value);
+        }
+
+        if(date1.value.compareTo(date2.value) < 0) {
+            if(iMonth2 == iMonth1) {
+                if(iDay2 < iDay1) {
+                    iDifference++;
+                }
+            }
+            if(iMonth2 < iMonth1) {
+                iDifference++;
+            }
+        }
+        else if(date1.value.compareTo(date2.value) > 0) {
+            if(iMonth2 == iMonth1) {
+                if(iDay2 > iDay1) {
+                    iDifference--;
+                }
+            }
+            if(iMonth2 > iMonth2) {
+                iDifference--;
+            }
+        }
+        else {
+            iDifference = 0;
+        }
+        return new ResultValue(SubClassif.DATE, "" + iDifference, Structure.PRIMITIVE, ";");
     }
 }

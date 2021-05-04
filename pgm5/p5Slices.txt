@@ -1,0 +1,28 @@
+String spliceStr = "sliceexamplestringforcompilers";
+String spliceStr2 = spliceStr[18~30];
+print("Printing spliceStr[18~30]: ",spliceStr2);
+
+String spliceStr3 = spliceStr[(9*2+3)~30];
+print("Printing spliceStr[(9*2+3)~30]: ",spliceStr3);
+
+String array[5] = "Pickle", "Slice", "Scanner", "Parser", "Infix";
+print("All elements in array");
+for word in array:
+    print(word);
+endfor;
+
+String arraySplice[3] = array[~4];
+print("Splice of the array");
+for word in arraySplice:
+    print(word);
+endfor;
+
+String alphabet = "abcdefghijklmnopqrstuvwxyz";
+Int i = 0;
+
+print("Alphabet waterfall:");
+
+while i < 26:
+    i += 1;
+    print(alphabet[ 0 ~ i ]);
+endwhile;

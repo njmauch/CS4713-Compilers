@@ -168,6 +168,35 @@ public class Parser{
                     || scan.currentToken.tokenStr.equals("MAXELEM") || scan.currentToken.tokenStr.equals("LENGTH")) {
                 res = expr(false);
             }
+            else if(scan.currentToken.tokenStr.equals("dateDiff") || scan.currentToken.tokenStr.equals("dateAge")
+                    || scan.currentToken.tokenStr.equals("dateAdj")) {
+                String dateFunction = scan.currentToken.tokenStr;
+                ResultValue date1 = expr(true);
+                Token prevToken;
+                scan.getNext();
+
+                while(scan.currentToken.tokenStr.equals(")")) {
+                    scan.getNext();
+                }
+
+                ResultValue date2 = expr(true);
+                prevToken = scan.currentToken;
+
+                while(scan.currentToken.tokenStr.equals(")")) {
+                    scan.getNext();
+                }
+
+                switch(dateFunction) {
+                    case "dateDiff" -> res = Utility.dateDiff(this, date1, date2);
+                    case "dateAge" -> res = Utility.dateAge(this, date1, date2);
+                    case "dateAdj" -> res = Utility.dateAdj(this, date1, Integer.parseInt(date2.value));
+                }
+                if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
+                    error("Missing closing paren");
+                }
+                scan.setPosition(prevToken);
+                return res;
+            }
             //function was called but is not a built in or defined function
             else {
                 error("No function found with name %s", scan.currentToken.tokenStr);
@@ -254,7 +283,7 @@ public class Parser{
                     if(! scan.getNext().equals(";")) {
                         error("Expected ';' after %s", resCond.terminatingStr);
                     }
-                    if(resCond.terminatingStr.equals("break")){
+                    if(resCond.terminatingStr.equals("break")) {
                         break;
                     }
                     else {
@@ -268,7 +297,7 @@ public class Parser{
                 //go back to beginning of while to recheck condition statement
                 scan.setPosition(tempToken);
                 //get next token
-                scan.getNext();
+                //scan.getNext();
                 //evaluate condition again to determine if we execute while loop again
                 resCond = expr(false);
             }
@@ -312,6 +341,7 @@ public class Parser{
             case "Float" -> dclType = SubClassif.FLOAT;
             case "String" -> dclType = SubClassif.STRING;
             case "Bool" -> dclType = SubClassif.BOOLEAN;
+            case "Date" -> dclType = SubClassif.DATE;
             default -> error("Unknown declare type %s", scan.currentToken.tokenStr);
         }
         // get the variable name from source file
@@ -511,7 +541,7 @@ public class Parser{
         SubClassif type = SubClassif.EMPTY;
         Numeric nOp2;
         Numeric nOp1;
-        int iIndex = 0;
+        int iIndex = 0, iIndex2 = 0;
         boolean bIndex = false;
         ResultValue resO2;
         ResultValue resO1 = null;
@@ -542,10 +572,24 @@ public class Parser{
         scan.getNext();
         //if we encountered array, get the index value given for assignment
         if(scan.currentToken.tokenStr.equals("[")){
-            //get the index value inside brackets
-            iIndex = Integer.parseInt(Utility.castInt(this, expr(false)));
+            if(scan.nextToken.tokenStr.equals("~")) {
+                iIndex = 0;
+            }
+            else {
+                //get the index value inside brackets
+                iIndex = Integer.parseInt(Utility.castInt(this, expr(false)));
+            }
             //advance to right bracket
             scan.getNext();
+            if(scan.currentToken.tokenStr.equals("~")) {
+                if(scan.nextToken.tokenStr.equals("]")) {
+                    iIndex2 = smStorage.getValue(variableStr).value.length();
+                }
+                else {
+                    iIndex2 = Integer.parseInt(Utility.castInt(this, expr(false)));
+                }
+                scan.getNext();
+            }
             //advance to operator
             scan.getNext();
             //boolean used to say we are assigning value to index of array
@@ -589,7 +633,12 @@ public class Parser{
                                 //temp string that has index being updated
                                 String tempValue;
                                 //insert old string up to index, replace index value with given value (resO2), then fill rest of string with rest of old string
-                                tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                                if(iIndex == 0) {
+                                    tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                                }
+                                else {
+                                    tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex2);
+                                }
                                 //create new ResultValue with new string
                                 ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
                                 //assign new result to the already existing variable
@@ -651,7 +700,12 @@ public class Parser{
                                 error("Index %s out of bounds", iIndex);
                             }
                             String tempValue;
-                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                            if(iIndex2 == 0) {
+                                tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                            }
+                            else {
+                                tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex2);
+                            }
                             ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
                             resO1 = assign(variableStr, finalRes);
                         }
@@ -711,7 +765,12 @@ public class Parser{
                                 error("Index %s out of bounds", iIndex);
                             }
                             String tempValue;
-                            tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                            if(iIndex2 == 0) {
+                                tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
+                            }
+                            else {
+                                tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex2);
+                            }
 
                             ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
                             resO1 = assign(variableStr, finalRes);
@@ -778,11 +837,13 @@ public class Parser{
             error("Expected operand");
         }
         //Function print
-        if(scan.currentToken.primClassif == Classif.FUNCTION && (scan.currentToken.tokenStr.equals("print"))) {
+        if(scan.currentToken.primClassif == Classif.FUNCTION && (scan.currentToken.tokenStr.equals("print") ||
+                scan.currentToken.tokenStr.startsWith("date"))) {
             scan.getNext();
         }
         //If not print
-        if(scan.currentToken.primClassif != Classif.FUNCTION || scan.currentToken.tokenStr.equals("print")){
+        if(scan.currentToken.primClassif != Classif.FUNCTION || scan.currentToken.tokenStr.equals("print")
+                || scan.currentToken.tokenStr.startsWith("date")){
             scan.getNext();
         }
         Token prevToken = scan.currentToken;	//Save the current Token
@@ -816,7 +877,7 @@ public class Parser{
                     switch(scan.currentToken.tokenStr) {
                         //If the OPERATOR is not
                         case "not":
-                            if (prevToken.primClassif == Classif.OPERATOR || prevToken.tokenStr.equals(",") || prevToken.tokenStr.equals("(")) {
+                            if (scan.nextToken.primClassif == Classif.OPERATOR || scan.nextToken.tokenStr.equals(",") || scan.nextToken.tokenStr.equals("(")) {
                                 stack.push(scan.currentToken);
                             }
                             break;
@@ -843,6 +904,7 @@ public class Parser{
                                     }
                                     else if (popped.tokenStr.equals("not")) {
                                         res = evalCond(outStack.pop(), new ResultValue(), popped.tokenStr);
+                                        res.terminatingStr = popped.tokenStr;
                                     }
                                     else {
                                         resValue2 = outStack.pop();
@@ -852,12 +914,19 @@ public class Parser{
                                 }
                             }
                             stack.push(scan.currentToken);
+                            break;
                     }
                     bCategory = false;
                     break;
                 case FUNCTION:	//If the current token is FUNCTION
                     if (bCategory) {
                         error("Missing separator, instead got: %s", scan.currentToken.tokenStr);
+                    }
+                    if(scan.currentToken.tokenStr.startsWith("date")) {
+                        ResultValue dateResult = functionStmt(true);
+                        outStack.push(dateResult);
+                        bCategory = true;
+                        break;
                     }
                     stack.push(scan.currentToken);
                     if (scan.nextToken.tokenStr.equals("(")) {
@@ -868,12 +937,15 @@ public class Parser{
                     break;
                 case SEPARATOR:	//If the current token is SEPARATOR
                     switch (scan.currentToken.tokenStr) {
-                        case "(" -> stack.push(scan.currentToken);		//Push any (
-                        case ")" -> {									//Pop any )
+                        case "(" -> stack.push(scan.currentToken);        //Push any (
+                        case ")" -> {                                    //Pop any )
                             if (inFunc && scan.nextToken.tokenStr.equals(";")) {
                                 break;
                             }
                             bFound = false;
+                            if(scan.nextToken.tokenStr.equals(")")) {
+                                bFound = true;
+                            }
                             while (!stack.empty()) {
                                 popped = stack.pop();
                                 if (popped.tokenStr.equals("(") || popped.primClassif.equals(Classif.FUNCTION)) {
@@ -887,11 +959,9 @@ public class Parser{
                                     resValue1 = outStack.pop();
                                     res = evalCond(resValue1, new ResultValue(), "u-");
                                     outStack.push(res);
-                                }
-                                else if (popped.tokenStr.equals("not")) {
+                                } else if (popped.tokenStr.equals("not")) {
                                     outStack.push(evalCond(outStack.pop(), new ResultValue(), "not"));
-                                }
-                                else {
+                                } else {
                                     resValue1 = outStack.pop();
                                     resValue2 = outStack.pop();
                                     res = evalCond(resValue2, resValue1, popped.tokenStr);
@@ -991,8 +1061,7 @@ public class Parser{
             case "==" -> res = Utility.equal(this, resO1, resO2);
             case "!=" -> res = Utility.notEqual(this, resO1, resO2);
             case "u-" -> {
-                nOp1 = new Numeric(this, resO1, "u-", "Unary Minus");
-                res = Utility.uMinus(this, nOp1);
+                res = Utility.uMinus(this, resO1);
             }
             case "#" -> res = Utility.concat(this, resO1, resO2);
             case "not" -> res = Utility.not(this, resO1);
@@ -1012,12 +1081,14 @@ public class Parser{
     private ResultValue ifStmt(Boolean bExec) throws Exception {
         int saveLineNr = scan.currentToken.iSourceLineNr;
         ResultValue resCond;
+        String szTerminatingStr = ";";
 
         if (bExec) {
             resCond = expr(false);
             if (resCond.value.equals("T")) {
                 resCond = statements(true, "endif else");
                 if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
+                    szTerminatingStr = scan.currentToken.tokenStr;
                     if(! scan.getNext().equals(";")) {
                         error("Expected ';' after %s", resCond.terminatingStr);
                     }
@@ -1037,6 +1108,7 @@ public class Parser{
                     }
                     resCond = statements(true, "endif");
                     if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
+                        szTerminatingStr = scan.currentToken.tokenStr;
                         if(! scan.getNext().equals(";")) {
                             error("Expected ';' after %s", resCond.terminatingStr);
                         }
@@ -1056,7 +1128,7 @@ public class Parser{
             }
         }
 
-        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, ";");
+        return new ResultValue(SubClassif.VOID, "", Structure.PRIMITIVE, szTerminatingStr);
     }
 
     /**
@@ -1259,7 +1331,7 @@ public class Parser{
             else if(scan.currentToken.tokenStr.equals("from")) {
                 String stringCV = scan.currentToken.tokenStr;
                 String str, delim;
-                String stringM[];
+                String[] stringM;
 
                 if(smStorage.getValue(stringCV) == null) {
                     smStorage.insertValue(stringCV, new ResultValue(SubClassif.INTEGER, "", Structure.PRIMITIVE, "to"));
@@ -1353,7 +1425,7 @@ public class Parser{
         ResultValue resExpr = new ResultValue();
         ResultArray resultArray;
         ArrayList<ResultValue> exprValue = new ArrayList<>();
-        int populated = 0;
+        int populated = 1;
         Token tempToken = scan.currentToken;
 
         if(bExec) {
@@ -1362,10 +1434,11 @@ public class Parser{
                 if ((resExpr.structure == Structure.FIXED_ARRAY) || (resExpr.structure == Structure.UNBOUNDED_ARRAY)) {
                     if (populated != 1) {
                         error("Can only have one value as an array in value list");
-                        scan.setPosition(tempToken);
-                        return assignArrayStmt(variableStr, type, declared);
                     }
-                }
+                    scan.setPosition(tempToken);
+                    return assignArrayStmt(variableStr, type, declared);
+                    }
+
                 scan.getNext();
                 populated++;
                 if (type == SubClassif.INTEGER) {
@@ -1665,7 +1738,7 @@ public class Parser{
     public ResultValue getOperand() throws Exception {
         Token op = scan.currentToken;
         ResultValue resultValue1;
-        ResultValue index;
+        ResultValue index, index2 = null;
         if(op.subClassif.equals(SubClassif.IDENTIFIER)) {
             resultValue1 = smStorage.getValue(op.tokenStr);
             if (resultValue1 == null) {
@@ -1686,35 +1759,74 @@ public class Parser{
             String value = scan.currentToken.tokenStr;
 
             scan.getNext();
-            index = expr(false);
-            scan.getNext();
-            if(tempRes.structure != Structure.PRIMITIVE) {
-                ResultArray resultArray1 = (ResultArray) smStorage.getValue(value);
-                if(resultArray1 == null){
-                    error("Variable has not been yet declared: %s", op.tokenStr);
-                }
-                int iIndex = Integer.parseInt(Utility.castInt(this, index));
-                if(iIndex < 0) {
-                    if(resultArray1.declaredSize != -1) {
-                        iIndex += ((ResultArray) resultArray1).declaredSize;
-                    }
-                    else {
-                        iIndex += resultArray1.lastPopulated;
-                    }
-                }
-                if(resultArray1.declaredSize != -1 && iIndex >= resultArray1.declaredSize) {
-                    error("Trying to reference an index outside of bounds of array");
-                }
-                else if(resultArray1.declaredSize == -1 && resultArray1.array.get(iIndex) == null) {
-                    error("Index %d has not been initialized", iIndex);
-                }
-                else if(resultArray1.array.get(iIndex) == null) {
-                    error("Index %d has not been initialized", iIndex);
-                }
-                resultValue1 = resultArray1.array.get(iIndex);
+            if(scan.nextToken.tokenStr.equals("~")) {
+                index = new ResultValue(SubClassif.IDENTIFIER, "0", Structure.PRIMITIVE);
             }
             else {
-                {
+                index = expr(false);
+            }
+            if(scan.nextToken.tokenStr.equals("~")) {
+                scan.getNext();
+                if(scan.nextToken.tokenStr.equals("]")) {
+                    index2 = new ResultValue(SubClassif.IDENTIFIER, "-1", Structure.PRIMITIVE);
+                }
+                else {
+                    index2 = expr(false);
+                    if(Integer.parseInt(index2.value) < 0) {
+                        error("Slice value can not be less than -1");
+                    }
+                }
+            }
+            scan.getNext();
+            if(tempRes.structure != Structure.PRIMITIVE) {
+                if (index2 == null) {
+                    ResultArray resultArray1 = (ResultArray) smStorage.getValue(value);
+                    if (resultArray1 == null) {
+                        error("Variable has not been yet declared: %s", op.tokenStr);
+                    }
+                    int iIndex = Integer.parseInt(Utility.castInt(this, index));
+                    if (iIndex < 0) {
+                        if (resultArray1.declaredSize != -1) {
+                            iIndex += ((ResultArray) resultArray1).declaredSize;
+                        } else {
+                            iIndex += resultArray1.lastPopulated;
+                        }
+                    }
+
+                    if (resultArray1.declaredSize != -1 && iIndex >= resultArray1.declaredSize) {
+                        error("Trying to reference an index outside of bounds of array");
+                    } else if (resultArray1.declaredSize == -1 && resultArray1.array.get(iIndex) == null) {
+                        error("Index %d has not been initialized", iIndex);
+                    } else if (resultArray1.array.get(iIndex) == null) {
+                        error("Index %d has not been initialized", iIndex);
+                    }
+                    resultValue1 = resultArray1.array.get(iIndex);
+                } else {
+                    if (Integer.parseInt(index.value) < 0) {
+                        error("Slice index can not be negative");
+                    }
+                    ArrayList<ResultValue> newArray = new ArrayList<>();
+                    ResultArray firstArrayValue = (ResultArray) smStorage.getValue(value);
+                    if (firstArrayValue == null) {
+                        error("Variable has not been declared: %S", op.tokenStr);
+                    }
+                    int iIndex1 = (Integer.parseInt(Utility.castInt(this, index)));
+                    int iIndex2 = (Integer.parseInt(Utility.castInt(this, index2)));
+                    if (iIndex2 == -1) {
+                        iIndex2 = firstArrayValue.lastPopulated;
+                    }
+                    for (int i = iIndex1; i < iIndex2; i++) {
+                        newArray.add(firstArrayValue.array.get(i));
+                    }
+                    ResultArray newArrayValue = new ResultArray("Splice", newArray, firstArrayValue.type, Structure.FIXED_ARRAY, iIndex2 - iIndex1, iIndex2 - iIndex1);
+                    return newArrayValue;
+                }
+                if (resultValue1 == null) {
+                    error("Array was never initialized", value);
+                }
+            }
+            else {
+                if(index2 == null) {
                     resultValue1 = smStorage.getValue(value);
                     if(resultValue1 == null){
                         error("Variable has not been yet declared: %s", op.tokenStr);
@@ -1731,6 +1843,18 @@ public class Parser{
                     }
                     char ch = strVal.charAt((Integer.parseInt(Utility.castInt(this, index))));
                     resultValue1 = new ResultValue(SubClassif.STRING, String.valueOf(ch));
+                }
+                else {
+                    if(Integer.parseInt(index.value) < 0) {
+                        error("Slice index can't be negative");
+                    }
+                    resultValue1 = smStorage.getValue(value);
+                    String strVal = resultValue1.value;
+                    if(index2.value.equals("-1")) {
+                        index2.value = String.valueOf(resultValue1.value.length());
+                    }
+                    strVal = strVal.substring((Integer.parseInt(Utility.castInt(this, index))), (Integer.parseInt(Utility.castInt(this, index2))));
+                    resultValue1 = new ResultValue(SubClassif.STRING, strVal);
                 }
             }
         }
