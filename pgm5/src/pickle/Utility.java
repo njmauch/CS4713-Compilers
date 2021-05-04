@@ -616,4 +616,123 @@ public class Utility {
         }
         return new ResultValue(SubClassif.DATE, "" + iDifference, Structure.PRIMITIVE, ";");
     }
+
+    public static ResultValue in(Parser parser, ResultValue resO1, ResultArray resultArray) throws  Exception {
+        ResultValue resultValue = new ResultValue();
+        String strValue;
+
+        resultValue.type = SubClassif.BOOLEAN;
+        resultValue.structure = Structure.PRIMITIVE;
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            for (ResultValue resTemp : resultArray.array) {
+                if(resTemp == null) {
+                    continue;
+                }
+                strValue = castInt(parser, resTemp);
+                int iResValue = Integer.parseInt(resO1.value);
+                int iArrayValue = Integer.parseInt(strValue);
+
+                if(iResValue == iArrayValue) {
+                    resultValue.value = "T";
+                    break;
+                }
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            for (ResultValue resTemp : resultArray.array) {
+                if(resTemp == null) {
+                    continue;
+                }
+                strValue = castFloat(parser, resTemp);
+                double dResValue = Double.parseDouble(resO1.value);
+                double dArrayValue = Double.parseDouble(strValue);
+
+                if(dResValue == dArrayValue) {
+                    resultValue.value = "T";
+                    break;
+                }
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN) || resO1.type.equals(SubClassif.STRING) || resO1.type.equals(SubClassif.DATE)) {
+            for (ResultValue resTemp : resultArray.array) {
+                if(resO1.value.compareTo(resTemp.value) == 0) {
+                    if(resTemp == null) {
+                        continue;
+                    }
+                    resultValue.value = "T";
+                    break;
+                }
+            }
+        }
+        else {
+            parser.error("Unknown type: %s", resO1.type);
+        }
+        return resultValue;
+    }
+
+    public static ResultValue notin(Parser parser, ResultValue resO1, ResultArray resultArray) throws  Exception {
+        ResultValue resultValue = new ResultValue();
+        String strValue;
+
+        resultValue.type = SubClassif.BOOLEAN;
+        resultValue.structure = Structure.PRIMITIVE;
+        resultValue.value = "T";
+
+        if(resO1.type.equals(SubClassif.INTEGER)) {
+            for (ResultValue resTemp : resultArray.array) {
+                if(resTemp == null) {
+                    continue;
+                }
+                strValue = castInt(parser, resTemp);
+                int iResValue = Integer.parseInt(resO1.value);
+                int iArrayValue = Integer.parseInt(strValue);
+
+                if(iResValue == iArrayValue) {
+                    resultValue.value = "F";
+                    break;
+                }
+            }
+        }
+        else if(resO1.type.equals(SubClassif.FLOAT)) {
+            for (ResultValue resTemp : resultArray.array) {
+                if(resTemp == null) {
+                    continue;
+                }
+                strValue = castFloat(parser, resTemp);
+                double dResValue = Double.parseDouble(resO1.value);
+                double dArrayValue = Double.parseDouble(strValue);
+
+                if(dResValue == dArrayValue) {
+                    resultValue.value = "F";
+                    break;
+                }
+            }
+        }
+        else if(resO1.type.equals(SubClassif.BOOLEAN) || resO1.type.equals(SubClassif.STRING) || resO1.type.equals(SubClassif.DATE)) {
+            for (ResultValue resTemp : resultArray.array) {
+                if(resO1.value.compareTo(resTemp.value) == 0) {
+                    if(resTemp == null) {
+                        continue;
+                    }
+                    resultValue.value = "F";
+                    break;
+                }
+            }
+        }
+        else {
+            parser.error("Unknown type: %s", resO1.type);
+        }
+        return resultValue;
+    }
+
+    public static String castDate(Parser parser, ResultValue date) throws Exception {
+        if(date.value.matches("^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$") && validDate(parser, date)) {
+            return date.value;
+        }
+        else {
+            parser.error("Can't convert to date: %s", date.value);
+        }
+        return null;
+    }
 }

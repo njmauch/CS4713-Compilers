@@ -875,6 +875,17 @@ public class Parser{
                     }
 
                     switch(scan.currentToken.tokenStr) {
+                        case "IN":
+                        case "NOTIN":
+                            stack.push(scan.currentToken);
+                            if(scan.nextToken.tokenStr.equals("{")) {
+                                SubClassif type = scan.nextToken.subClassif;
+                                ArrayList<ResultValue> tempList = getArray();
+                                ResultArray temp = new ResultArray(tempList, type);
+                                outStack.push(temp);
+                                scan.getNext();
+                            }
+                            break;
                         //If the OPERATOR is not
                         case "not":
                             if (scan.nextToken.primClassif == Classif.OPERATOR || scan.nextToken.tokenStr.equals(",") || scan.nextToken.tokenStr.equals("(")) {
@@ -1066,6 +1077,8 @@ public class Parser{
             case "#" -> res = Utility.concat(this, resO1, resO2);
             case "not" -> res = Utility.not(this, resO1);
             case "or" -> res = Utility.or(this, resO1, resO2);
+            case "IN" -> res = Utility.in(this, resO1, (ResultArray) resO2);
+            case "NOTIN" -> res = Utility.notin(this, resO1, (ResultArray) resO2);
             default -> error("Bad compare token");
         }
         return res;
@@ -1154,6 +1167,10 @@ public class Parser{
                 res.type = SubClassif.BOOLEAN;
             }
             case STRING -> res.type = SubClassif.STRING;
+            case DATE -> {
+                res.value = Utility.castDate(this, res);
+                res.type = SubClassif.DATE;
+            }
             default -> error("Assign type is incompatible");
         }
         smStorage.insertValue(variableStr, res);
@@ -1456,7 +1473,12 @@ public class Parser{
                 } else if (type == SubClassif.STRING) {
                     resExpr.type = SubClassif.STRING;
                     exprValue.add(resExpr);
-                } else {
+                } else if(type.equals(SubClassif.DATE)) {
+                    resExpr.value = Utility.castDate(this, resExpr);
+                    resExpr.type = SubClassif.DATE;
+                    exprValue.add(resExpr);
+                }
+                else {
                     error("Invalid assign type: %s", variableStr);
                 }
             }
@@ -1521,15 +1543,21 @@ public class Parser{
                     resultValue.type = SubClassif.FLOAT;
                     resultArray1.array.set(iIndex, resultValue);
                 }
-                if (type.equals(SubClassif.BOOLEAN)) {
+                else if (type.equals(SubClassif.BOOLEAN)) {
                     resultValue = resultValue1.clone();
                     resultValue.value = Utility.castBoolean(this, resultValue);
                     resultValue.type = SubClassif.BOOLEAN;
                     resultArray1.array.set(iIndex, resultValue);
                 }
-                if (type.equals(SubClassif.STRING)) {
+                else if (type.equals(SubClassif.STRING)) {
                     resultValue = resultValue1.clone();
                     resultValue.type = SubClassif.STRING;
+                    resultArray1.array.set(iIndex, resultValue);
+                }
+                else if (type.equals(SubClassif.DATE)) {
+                    resultValue = resultValue1.clone();
+                    resultValue.value = Utility.castDate(this, resultValue);
+                    resultValue.type = SubClassif.DATE;
                     resultArray1.array.set(iIndex, resultValue);
                 }
             } else {
@@ -1607,6 +1635,11 @@ public class Parser{
                     else if(type.equals(SubClassif.STRING)) {
                         resExpr = resultValue.clone();
                         resExpr.type = SubClassif.STRING;
+                        resultArray1.array.set(i, resExpr);
+                    }
+                    else if(type.equals(SubClassif.DATE)) {
+                        resExpr = resultValue.clone();
+                        resExpr.type = SubClassif.DATE;
                         resultArray1.array.set(i, resExpr);
                     }
                     else {
@@ -1699,7 +1732,23 @@ public class Parser{
                             }
                             resultArray1.array.set(i, resExpr);
                         }
-
+                    }
+                    else if(type.equals(SubClassif.DATE)) {
+                        resExpr = resultArray2.array.get(i).clone();
+                        resExpr.value = Utility.castDate(this, resExpr);
+                        resExpr.type = SubClassif.DATE;
+                        if (declared != -1) {
+                            resultArray1.array.set(i, resExpr);
+                        }
+                        else {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                            resultArray1.array.set(i, resExpr);
+                        }
                     }
                     else {
                         error("Invalid assign type: %s", variableStr);
@@ -1889,5 +1938,45 @@ public class Parser{
         return prec;
     }
 
+    public ArrayList<ResultValue> getArray() throws Exception {
+        ResultValue resultValue = new ResultValue();
+        ResultArray resultArray;
+        int iPopulated = 1;
 
+        ArrayList<ResultValue> resultValueArrayList = new ArrayList<>();
+
+        while(!resultValue.terminatingStr.equals(";") && !scan.currentToken.tokenStr.equals(";") && !scan.nextToken.tokenStr.equals("}")) {
+            scan.getNext();
+            resultValue = expr(false);
+            iPopulated++;
+            if(scan.currentToken.subClassif.equals(SubClassif.INTEGER)) {
+                resultValue.value = Utility.castInt(this, resultValue);
+                resultValue.type = SubClassif.INTEGER;
+                resultValueArrayList.add(resultValue);
+            }
+            else if(scan.currentToken.subClassif.equals(SubClassif.FLOAT)) {
+                resultValue.value = Utility.castFloat(this, resultValue);
+                resultValue.type = SubClassif.FLOAT;
+                resultValueArrayList.add(resultValue);
+            }
+            else if(scan.currentToken.subClassif.equals(SubClassif.BOOLEAN)) {
+                resultValue.value = Utility.castBoolean(this, resultValue);
+                resultValue.type = SubClassif.BOOLEAN;
+                resultValueArrayList.add(resultValue);
+            }
+            else if(scan.currentToken.subClassif.equals(SubClassif.STRING)) {
+                resultValue.type = SubClassif.STRING;
+                resultValueArrayList.add(resultValue);
+            }
+            else if(scan.currentToken.subClassif.equals(SubClassif.DATE)) {
+                resultValue.value = Utility.castDate(this, resultValue);
+                resultValue.type = SubClassif.DATE;
+                resultValueArrayList.add(resultValue);
+            }
+            else {
+                error("Invalid list type: %s", scan.currentToken.tokenStr);
+            }
+        }
+        return resultValueArrayList;
+    }
 }

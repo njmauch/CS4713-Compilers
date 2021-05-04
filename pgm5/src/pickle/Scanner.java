@@ -16,10 +16,10 @@ public class Scanner {
     public boolean bShowToken;
 
     private final static String whiteSpace = " \t\n";
-    private final static String delimiters = " \t;:()\'\"=!<>+-*/[]#,^\n~";
+    private final static String delimiters = " \t;:()\'\"=!<>+-*/[]#,^\n~{}";
     private final static String strOperators = "#<>=!^*/+-";
     private final static String operators = "+-*/<>!=#^";
-    private final static String separators = "():;~[],";
+    private final static String separators = "():;~[],{}";
 
     public Scanner(String sourceFileNm, SymbolTable symbolTable) throws Exception {
         this.sourceFileNm = sourceFileNm;

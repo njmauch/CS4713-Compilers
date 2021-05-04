@@ -1,0 +1,18 @@
+String name = "Nathan";
+if name IN {"Tony", "Clark", "Nathan", "Brad"}:
+    print("Nathan is in the list Tony, Clark, Nathan, Brad");
+endif;
+
+if name NOTIN {"Tony", "Clark", "Tom", "Brad"}:
+    print("Nathan is not the list Tony, Clark, Tom, Brad");
+endif;
+
+
+String chars[3] = "A", "B", "C";
+for ch in chars:
+    if ch IN {"A", "B", "C"}:
+        if ch NOTIN {"X", "Y", "Z"}:
+            print("Correct");
+        endif;
+    endif;
+endfor;

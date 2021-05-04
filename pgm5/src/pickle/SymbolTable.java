@@ -104,8 +104,8 @@ public class SymbolTable {
         this.putSymbol("and", new STEntry("and", Classif.OPERATOR));
         this.putSymbol("or", new STEntry("or", Classif.OPERATOR));
         this.putSymbol("not", new STEntry("not", Classif.OPERATOR));
-        this.putSymbol("in", new STEntry("in", Classif.OPERATOR));
-        this.putSymbol("notin", new STEntry("notin", Classif.OPERATOR));
+        this.putSymbol("IN", new STEntry("IN", Classif.OPERATOR));
+        this.putSymbol("NOTIN", new STEntry("NOTIN", Classif.OPERATOR));
 
         this.putSymbol("Int", new STControl("Int", Classif.CONTROL, SubClassif.DECLARE));
         this.putSymbol("Float", new STControl("Float", Classif.CONTROL, SubClassif.DECLARE));
