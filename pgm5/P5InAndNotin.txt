@@ -8,11 +8,15 @@ if name NOTIN {"Tony", "Clark", "Tom", "Brad"}:
 endif;
 
 
-String chars[3] = "A", "B", "C";
+String chars[5] = "A", "B", "C", "D", "X";
 for ch in chars:
-    if ch IN {"A", "B", "C"}:
+    if ch IN {"A", "B", "C", "X"}:
         if ch NOTIN {"X", "Y", "Z"}:
-            print("Correct");
+            print("A, B, C, X contains and X, Y, Z does not contain: ", ch);
+        else:
+            print("A, B, C, X and X, Y, Z contains", ch);
         endif;
+    else:
+        print("A, B, C, X does not contain: ", ch);
     endif;
 endfor;

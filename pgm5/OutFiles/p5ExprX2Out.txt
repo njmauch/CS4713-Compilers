@@ -1,0 +1,17 @@
+p5ExprX.txt
+This file contains many errors within expressions.
+as you capture each error comment it out.
+OK1 32
+OK2 33
+OK3 -1
+OK4 2 -2-2)= F
+OK5 99.0
+OK6 36
+OK7 38
+OK8 3 5.0
+Line 29 Unexpected operand, instead got: i2, File: p5ExprX.txt
+	at pickle.Parser.error(Parser.java:63)
+	at pickle.Parser.expr(Parser.java:865)
+	at pickle.Parser.assignmentStmt(Parser.java:616)
+	at pickle.Parser.statement(Parser.java:111)
+	at pickle.Pickle.main(Pickle.java:33)
