@@ -1,3 +1,11 @@
+String str = "tacobell";
+str[~4] = "school";// changes it  from
+                 // schoolbell to bell
+print(str);  // prints schoolbell
+str[0~6] = "";   // changes it  from
+                 // schoolbell to bell
+print(str);
+
 String spliceStr = "sliceexamplestringforcompilers";
 String spliceStr2 = spliceStr[18~30];
 print("Printing spliceStr[18~30]: ",spliceStr2);
@@ -26,3 +34,7 @@ while i < 26:
     i += 1;
     print(alphabet[ 0 ~ i ]);
 endwhile;
+
+for ch in "this is a string":
+    print (ch);
+endfor;

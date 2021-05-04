@@ -633,7 +633,7 @@ public class Parser{
                                 //temp string that has index being updated
                                 String tempValue;
                                 //insert old string up to index, replace index value with given value (resO2), then fill rest of string with rest of old string
-                                if(iIndex == 0) {
+                                if(iIndex2 == 0) {
                                     tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex + 1);
                                 }
                                 else {
@@ -1101,7 +1101,7 @@ public class Parser{
             if (resCond.value.equals("T")) {
                 resCond = statements(true, "endif else");
                 if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
-                    szTerminatingStr = scan.currentToken.tokenStr;
+                    szTerminatingStr = resCond.terminatingStr;
                     if(! scan.getNext().equals(";")) {
                         error("Expected ';' after %s", resCond.terminatingStr);
                     }
@@ -1121,7 +1121,7 @@ public class Parser{
                     }
                     resCond = statements(true, "endif");
                     if(resCond.terminatingStr.equals("break") || resCond.terminatingStr.equals("continue")) {
-                        szTerminatingStr = scan.currentToken.tokenStr;
+                        szTerminatingStr = resCond.terminatingStr;
                         if(! scan.getNext().equals(";")) {
                             error("Expected ';' after %s", resCond.terminatingStr);
                         }
@@ -1442,14 +1442,14 @@ public class Parser{
         ResultValue resExpr = new ResultValue();
         ResultArray resultArray;
         ArrayList<ResultValue> exprValue = new ArrayList<>();
-        int populated = 1;
+        int populated = 0;
         Token tempToken = scan.currentToken;
 
         if(bExec) {
             while(!resExpr.terminatingStr.equals(";") && !scan.nextToken.tokenStr.equals(";")) {
                 resExpr = expr(false);
                 if ((resExpr.structure == Structure.FIXED_ARRAY) || (resExpr.structure == Structure.UNBOUNDED_ARRAY)) {
-                    if (populated != 1) {
+                    if (populated != 0) {
                         error("Can only have one value as an array in value list");
                     }
                     scan.setPosition(tempToken);
@@ -1515,8 +1515,8 @@ public class Parser{
      * @throws Exception
      */
     public ResultArray assignIndex(String variableStr, SubClassif type, int iIndex, ResultValue resIndex) throws Exception{
-        ResultValue resultValue = new ResultValue();
-        ResultArray resultArray = null;
+        ResultValue resultValue;
+        ResultArray resultArray;
         int populated = 0;
 
         if(scan.nextToken.primClassif.equals(Classif.SEPARATOR)) {
@@ -1542,26 +1542,159 @@ public class Parser{
                     resultValue.value = Utility.castFloat(this, resultValue);
                     resultValue.type = SubClassif.FLOAT;
                     resultArray1.array.set(iIndex, resultValue);
-                }
-                else if (type.equals(SubClassif.BOOLEAN)) {
+                } else if (type.equals(SubClassif.BOOLEAN)) {
                     resultValue = resultValue1.clone();
                     resultValue.value = Utility.castBoolean(this, resultValue);
                     resultValue.type = SubClassif.BOOLEAN;
                     resultArray1.array.set(iIndex, resultValue);
-                }
-                else if (type.equals(SubClassif.STRING)) {
+                } else if (type.equals(SubClassif.STRING)) {
                     resultValue = resultValue1.clone();
                     resultValue.type = SubClassif.STRING;
                     resultArray1.array.set(iIndex, resultValue);
-                }
-                else if (type.equals(SubClassif.DATE)) {
+                } else if (type.equals(SubClassif.DATE)) {
                     resultValue = resultValue1.clone();
                     resultValue.value = Utility.castDate(this, resultValue);
                     resultValue.type = SubClassif.DATE;
                     resultArray1.array.set(iIndex, resultValue);
+                } else {
+                    error("Can't assign structure into index", resultValue1.structure);
                 }
-            } else {
-                error("Can't assign structure into index", resultValue1.structure);
+            } else if(resultValue1.structure.equals(Structure.FIXED_ARRAY) && resultValue1.value.equals("Splice")) {
+                int iLength = 1;
+                ResultArray resultArray2 = (ResultArray) resultValue1;
+                int iDeclaredLength = resultArray1.declaredSize;
+                int iPopulated = resultArray2.lastPopulated;
+
+                if(resultArray1.declaredSize != -1 && iDeclaredLength < iPopulated) {
+                    iPopulated = iDeclaredLength;
+                }
+                for(int i = 0; i < iPopulated;  i++) {
+                    if(type.equals(SubClassif.INTEGER)) {
+                        resultValue = resultArray2.array.get(i).clone();
+                        resultValue.value = Utility.castInt(this, resultValue);
+                        resultValue.type = SubClassif.INTEGER;
+                        if(resultArray1.declaredSize != -1) {
+                            if(i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            }
+                            else {
+                                resultArray1.array.add(iIndex, resultValue);
+                            }
+                        }
+                        else {
+                            if(resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if(resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                            if(i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            }
+                            else {
+                                resultArray1.array.add(iIndex++, resultValue);
+                            }
+                        }
+                    }
+                    else if(type.equals(SubClassif.FLOAT)) {
+                        resultValue = resultArray2.array.get(i).clone();
+                        resultValue.value = Utility.castFloat(this, resultValue);
+                        resultValue.type = SubClassif.FLOAT;
+                        if (resultArray1.declaredSize != -1) {
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex, resultValue);
+                            }
+                        } else {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex++, resultValue);
+                            }
+                        }
+                    }
+                    else if(type.equals(SubClassif.BOOLEAN)) {
+                        resultValue = resultArray2.array.get(i).clone();
+                        resultValue.value = Utility.castBoolean(this, resultValue);
+                        resultValue.type = SubClassif.BOOLEAN;
+                        if (resultArray1.declaredSize != -1) {
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex, resultValue);
+                            }
+                        } else {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex++, resultValue);
+                            }
+                        }
+                    }
+                    else if(type.equals(SubClassif.DATE)) {
+                        resultValue = resultArray2.array.get(i).clone();
+                        resultValue.value = Utility.castDate(this, resultValue);
+                        resultValue.type = SubClassif.DATE;
+                        if (resultArray1.declaredSize != -1) {
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex, resultValue);
+                            }
+                        } else {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex++, resultValue);
+                            }
+                        }
+                    }
+                    else if(type.equals(SubClassif.STRING)) {
+                        resultValue = resultArray2.array.get(i).clone();
+                        resultValue.type = SubClassif.STRING;
+                        if (resultArray1.declaredSize != -1) {
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex, resultValue);
+                            }
+                        } else {
+                            if (resultArray1.array == null) {
+                                resultArray1.array = new ArrayList<>();
+                            }
+                            if (resultArray1.array.size() <= i) {
+                                resultArray1.array.add(i, null);
+                            }
+                            if (i == 0) {
+                                resultArray1.array.set(iIndex++, resultValue);
+                            } else {
+                                resultArray1.array.add(iIndex++, resultValue);
+                            }
+                        }
+                    }
+                    else {
+                        error("Invalid assign type: %s", variableStr);
+                    }
+                }
             }
             for (ResultValue resTemp : resultArray1.array) {
                 if (resTemp != null) {
