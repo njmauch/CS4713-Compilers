@@ -1,0 +1,2 @@
+String spliceStr = "sliceexamplestringforcompilers";
+String spliceStr2 = spliceStr[~-1]; //Slice out of bounds

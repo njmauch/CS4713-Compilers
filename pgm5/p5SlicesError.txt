@@ -1,3 +1,2 @@
 String spliceStr = "sliceexamplestringforcompilers";
-String spliceStr2 = spliceStr[18~31];
-print("Printing spliceStr[18~30]: ",spliceStr2);
+String spliceStr2 = spliceStr[18~31]; //Slice out of bounds

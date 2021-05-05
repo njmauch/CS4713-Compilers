@@ -904,14 +904,13 @@ public class Parser{
                             }
                         default:
                             while (!stack.empty()) {
-                                if (getPrecedence(scan.currentToken, false) > getPrecedence((Token) stack.peek(), true)) {
+                                if (getPrecedence(scan.currentToken, false) > getPrecedence(stack.peek(), true)) {
                                     break;
                                 } else if (!stack.empty()) {
                                     popped = stack.pop();
                                     resValue1 = outStack.pop();
                                     if (popped.tokenStr.equals("u-")) {
                                         res = evalCond(resValue1, new ResultValue(), "u-");
-                                        outStack.push(res);
                                     }
                                     else if (popped.tokenStr.equals("not")) {
                                         res = evalCond(outStack.pop(), new ResultValue(), popped.tokenStr);
@@ -1955,7 +1954,7 @@ public class Parser{
                 else {
                     index2 = expr(false);
                     if(Integer.parseInt(index2.value) < 0) {
-                        error("Slice value can not be less than -1");
+                        error("Slice value can not be less than 0");
                     }
                 }
             }
