@@ -1,0 +1,31 @@
+p5ExprX.txt 
+This file contains many errors within expressions. 
+as you capture each error comment it out. 
+OK1 32 
+OK2 33 
+OK3 -1 
+OK4 2 SPACES(-2)= F 
+OK5 99.0 
+OK6 36 
+OK7 38 
+OK8 3 5.0 
+Bracket OK1 6 
+Bracket OK2 9 
+Bracket OK3 8 
+Bracket OK4 8 
+Paren OK1 15 
+Coerce OK1 60 
+Coerce OK2 60 
+Coerce OK3 60.0 
+Coerce OK4 - true 
+Line 75 Unable to convert to integer: A, File: p5ExprX.txt
+	at pickle.Parser.error(Parser.java:63)
+	at pickle.Utility.castInt(Utility.java:391)
+	at pickle.Utility.greaterThan(Utility.java:160)
+	at pickle.Parser.evalCond(Parser.java:1069)
+	at pickle.Parser.expr(Parser.java:979)
+	at pickle.Parser.ifStmt(Parser.java:1098)
+	at pickle.Parser.statement(Parser.java:93)
+	at pickle.Pickle.main(Pickle.java:33)
+
+Process finished with exit code 0

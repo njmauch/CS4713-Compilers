@@ -191,7 +191,7 @@ public class Parser{
                     case "dateAge" -> res = Utility.dateAge(this, date1, date2);
                     case "dateAdj" -> res = Utility.dateAdj(this, date1, Integer.parseInt(date2.value));
                 }
-                if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
+                if(!prevToken.tokenStr.equals(")") && scan.currentToken.primClassif != Classif.EOF) {
                     error("Missing closing paren");
                 }
                 scan.setPosition(prevToken);
@@ -250,7 +250,7 @@ public class Parser{
                 error("Missing separator");
             }
         }
-        if(!prevToken.tokenStr.equals(")") && scan.nextToken.primClassif != Classif.EOF) {
+        if(!prevToken.tokenStr.equals(")") && scan.currentToken.primClassif != Classif.EOF) {
             error("Func %s missing closing paren", funcName);
         }
         //print out the line
@@ -293,6 +293,9 @@ public class Parser{
                 //if endwhile is not found then print error
                 if(! resCond.terminatingStr.equals("endwhile")){
                     error("Expected endwhile for while beggining line %s, got %s", tempToken.iSourceLineNr, resCond.value);
+                }
+                if(! scan.nextToken.tokenStr.equals(";")) {
+                    error("Expected ; after endwhile");
                 }
                 //go back to beginning of while to recheck condition statement
                 scan.setPosition(tempToken);
@@ -444,7 +447,7 @@ public class Parser{
                     }
                     //found something bad
                     else {
-                        error("Expected = or ; and got: %s", scan.currentToken.tokenStr);
+                        error("Expected =, ], or ; and got: %s", scan.currentToken.tokenStr);
                     }
                 } else {
                     error("Invalid length: %s", scan.nextToken.tokenStr);

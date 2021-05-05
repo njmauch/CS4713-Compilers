@@ -1,0 +1,9 @@
+print("While missing endwhile");
+
+Int i = 0;
+
+while i < 5;
+	print(i);
+endwhile
+
+Int j = 4;

@@ -1,8 +1,8 @@
 String name = "Nathan";
 Int A = 0;
-if name IN {}:              //EmptyStackException
-    print("Nathan is in the list Tony, Clark, Nathan, Brad");
-endif;
+//if name IN {}:              //EmptyStackException
+    //print("Nathan is in the list Tony, Clark, Nathan, Brad");
+//endif;
 if name NOTIN A:             //CastException
     print("Nathan is not in the list Tony, Clark, Nathan, Brad");
 endif;

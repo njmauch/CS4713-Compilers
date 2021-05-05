@@ -78,7 +78,9 @@ public class Scanner {
             if (sourceLineM.get(iSourceLineNr).isEmpty()) {
                 //System.out.printf("   %d %s\n", iSourceLineNr + 1, sourceLineM.get(iSourceLineNr));
                 iSourceLineNr++;
-                textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                if (iSourceLineNr < sourceLineM.size()) {
+                    textCharM = sourceLineM.get(iSourceLineNr).toCharArray();
+                }
                 iColPos = 0;
                 getNextToken();
                 return;

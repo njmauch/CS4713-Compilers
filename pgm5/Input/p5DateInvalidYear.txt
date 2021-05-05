@@ -1,0 +1,3 @@
+Date badDate;
+
+badDate = '206-12-31';  // standard java functions would accept

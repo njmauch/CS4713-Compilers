@@ -1,0 +1,5 @@
+print("Date Function Missing closing paren");
+
+Date diff = dateDiff("2017-03-01", "2016-03-01";
+
+print(diff);
