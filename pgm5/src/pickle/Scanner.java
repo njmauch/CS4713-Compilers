@@ -315,6 +315,9 @@ public class Scanner {
         }
 
         strToken.tokenStr = tempStr.toString();
+        if(strToken.tokenStr.matches("^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$")) {
+            strToken.subClassif = SubClassif.DATE;
+        }
     }
 
     private void createOperandToken(Token operandToken) throws Exception {

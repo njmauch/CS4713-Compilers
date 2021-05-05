@@ -613,7 +613,7 @@ public class Parser{
                         case PRIMITIVE -> {
                             if (!bIndex) {
                                 //call assign to assign the result from the expresion after = to the variable
-                                resO1 = assign(variableStr, expr(false));
+                                resO1 = assign(variableStr, expr(false), type);
                                 if (scan.currentToken.primClassif != Classif.OPERAND) {
                                     scan.getNext();
                                 }
@@ -642,7 +642,7 @@ public class Parser{
                                 //create new ResultValue with new string
                                 ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
                                 //assign new result to the already existing variable
-                                resO1 = assign(variableStr, finalRes);
+                                resO1 = assign(variableStr, finalRes, type);
                             }
                             return resO1;
                         }
@@ -686,7 +686,7 @@ public class Parser{
                             nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
                             nOp1 = new Numeric(this, res, "+=", "1st Operand");
                             ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
-                            resO1 = assign(variableStr, resTemp);
+                            resO1 = assign(variableStr, resTemp, type);
                             if (scan.currentToken.primClassif != Classif.OPERAND) {
                                 scan.getNext();
                             }
@@ -707,7 +707,7 @@ public class Parser{
                                 tempValue = strValue.substring(0, iIndex) + resO2.value + strValue.substring(iIndex2);
                             }
                             ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
-                            resO1 = assign(variableStr, finalRes);
+                            resO1 = assign(variableStr, finalRes, type);
                         }
                         return resO1;
                     } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
@@ -751,7 +751,7 @@ public class Parser{
                             nOp2 = new Numeric(this, expr(false), "+=", "2nd operand");
                             nOp1 = new Numeric(this, res, "+=", "1st Operand");
                             ResultValue resTemp = Utility.addition(this, nOp1, nOp2);
-                            resO1 = assign(variableStr, resTemp);
+                            resO1 = assign(variableStr, resTemp, type);
                             if (scan.currentToken.primClassif != Classif.OPERAND) {
                                 scan.getNext();
                             }
@@ -773,7 +773,7 @@ public class Parser{
                             }
 
                             ResultValue finalRes = new ResultValue(SubClassif.STRING, tempValue);
-                            resO1 = assign(variableStr, finalRes);
+                            resO1 = assign(variableStr, finalRes, type);
                         }
                         return resO1;
                     } else if (res.structure.equals(Structure.FIXED_ARRAY) || res.structure.equals(Structure.UNBOUNDED_ARRAY)) {
@@ -1152,8 +1152,8 @@ public class Parser{
      * @return ResultValue
      * @throws Exception
      */
-    private ResultValue assign(String variableStr, ResultValue res) throws Exception {
-        switch (res.type) {
+    private ResultValue assign(String variableStr, ResultValue res, SubClassif type) throws Exception {
+        switch (type) {
             case INTEGER -> {
                 res.value = Utility.castInt(this, res);
                 res.type = SubClassif.INTEGER;
